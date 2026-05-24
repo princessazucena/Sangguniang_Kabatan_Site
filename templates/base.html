@@ -32,7 +32,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
           referrerpolicy="no-referrer" />
 </head>
-<body class="min-h-screen bg-slate-50 text-slate-800 overflow-x-hidden">
+<body class="min-h-screen bg-slate-50 text-slate-800 overflow-x-hidden {% block body_class %}{% endblock %}">
     <header class="bg-white shadow-sm border-b-4 border-brand-400">
         <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
             <a href="{{ url_for('public.home') }}" class="flex items-center gap-2">
@@ -41,7 +41,6 @@
                 <span class="font-semibold text-lg text-brand-700 leading-tight">Sangguniang Kabataan ng Bukal<br/><span class="text-sm font-medium text-brand-600">Scholarship Portal</span></span>
             </a>
             <nav class="flex items-center gap-4 text-sm">
-                <a href="{{ url_for('public.home') }}" class="hover:text-brand-600">Announcements</a>
                 {% if session.get('role') == 'student' %}
                     <span class="hidden sm:inline text-slate-500">Hi, {{ session.get('full_name') }}</span>
                 {% elif session.get('role') == 'admin' %}
@@ -74,13 +73,81 @@
 
     {% block hero %}{% endblock %}
 
+    {% block main %}
     <main class="max-w-6xl mx-auto px-4 py-8">
         {% block content %}{% endblock %}
     </main>
+    {% endblock %}
 
+    {% block footer %}
+    {% if not session.get('user_id') %}
     <footer class="text-center text-xs text-slate-500 py-6">
-        &copy; {{ 2026 }} Sangguniang Kabataan ng Bukal Scholarship Portal
+        <div class="flex items-center justify-center gap-3">
+            <span>&copy; {{ 2026 }} Sangguniang Kabataan ng Bukal Scholarship Portal</span>
+            <span class="text-slate-300">·</span>
+            <button type="button" data-about-open
+                    class="text-brand-600 hover:underline">
+                About Us
+            </button>
+        </div>
     </footer>
+    {% endif %}
+    {% endblock %}
+
+    {# About Us modal #}
+    <div id="about-modal"
+         class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4"
+         role="dialog" aria-modal="true" aria-labelledby="about-title">
+        <div class="absolute inset-0 bg-slate-900/60" data-about-close></div>
+        <div class="relative bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-3 border-b">
+                <h2 id="about-title" class="text-lg font-bold text-brand-700">About Us</h2>
+                <button type="button" data-about-close
+                        class="text-slate-400 hover:text-slate-600" aria-label="Close">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="px-5 py-4 overflow-y-auto text-sm text-slate-700 space-y-3 leading-relaxed">
+                <p>
+                    Ang <span class="font-semibold">Sangguniang Kabataan ng Barangay Bukal</span> ay
+                    ang opisyal na organisasyon ng kabataan na nagsisilbing katuwang ng
+                    pamahalaang barangay sa pagtataguyod ng kapakanan, karapatan, at pag-unlad
+                    ng mga kabataan sa komunidad. Bilang isang youth government organization,
+                    layunin naming maging boses ng kabataan at magsulong ng mga programa,
+                    proyekto, at gawaing nakatuon sa edukasyon, kalusugan, palakasan, pamumuno,
+                    kalikasan, at paghubog ng responsableng mamamayan. Ang Sangguniang
+                    Kabataan ay itinatag upang mabigyan ng pagkakataon ang mga kabataan na
+                    makilahok sa pamamahala at pagdedesisyon para sa ikabubuti ng kanilang
+                    komunidad.
+                </p>
+                <p>
+                    Naniniwala kami na ang kabataan ang susi sa mas maunlad at mas maliwanag
+                    na kinabukasan. Sa pamamagitan ng pagkakaisa, aktibong pakikilahok, at
+                    makabuluhang paglilingkod, patuloy naming isinusulong ang mga inisyatibang
+                    nagbibigay inspirasyon at oportunidad para sa bawat kabataang taga-Bukal.
+                </p>
+                <p>
+                    Bilang inyong lingkod-kabataan, nakatuon kami sa paglikha ng mga programang
+                    may positibong epekto sa buhay ng bawat isa, habang itinataguyod ang
+                    transparency, inclusivity, at good governance. Layunin naming maging tulay
+                    sa pagitan ng kabataan at lokal na pamahalaan upang matiyak na ang kanilang
+                    mga boses, pangangailangan, at adhikain ay marinig at mabigyang aksyon.
+                </p>
+                <blockquote class="border-l-4 border-brand-400 bg-brand-50 px-4 py-3 italic text-slate-700 rounded-r-md">
+                    "Kabataang Bukal: Nagkakaisa, Nakikilahok, at Nangunguna para sa Mas
+                    Maunlad na Kinabukasan."
+                </blockquote>
+                <div class="pt-1">
+                    <a href="https://www.facebook.com/profile.php?id=61553937551899"
+                       target="_blank" rel="noopener"
+                       class="inline-flex items-center gap-2 text-brand-600 hover:underline font-medium">
+                        <i class="fa-brands fa-facebook text-lg"></i>
+                        Visit our Facebook page
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {# Global password show/hide toggle. Any button with [data-password-toggle]
        toggles the type of the input it sits next to inside .password-field. #}
@@ -102,6 +169,23 @@
                 icon.classList.toggle('fa-eye', showing);
                 icon.classList.toggle('fa-eye-slash', !showing);
             }
+        });
+    })();
+    </script>
+
+    {# About Us modal open/close #}
+    <script>
+    (function () {
+        const modal = document.getElementById('about-modal');
+        if (!modal) return;
+        function open() { modal.classList.remove('hidden'); }
+        function close() { modal.classList.add('hidden'); }
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('[data-about-open]')) { e.preventDefault(); open(); return; }
+            if (e.target.closest('[data-about-close]')) { close(); return; }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') close();
         });
     })();
     </script>

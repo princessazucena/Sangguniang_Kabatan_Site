@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{# Auth pages (login, signup, verify): lock the viewport so the page never
+   scrolls. The header stays at the top, footer at the bottom, and the card
+   fills the remaining space. If the form is ever taller than the available
+   space (very small phones), the card itself scrolls instead of the page. #}
+
+{% block body_class %}h-screen overflow-hidden flex flex-col{% endblock %}
+
+{% block main %}
+<main class="flex-1 min-h-0 flex items-center justify-center px-4 py-4">
+    <div class="w-full {% block auth_card_width %}max-w-md{% endblock %}
+                bg-white rounded-xl shadow border border-slate-100
+                max-h-full overflow-y-auto p-5 sm:p-6">
+        {% block auth_content %}{% endblock %}
+    </div>
+</main>
+{% endblock %}
+
+{% block footer %}
+<footer class="text-center text-[11px] text-slate-500 py-2 shrink-0">
+    &copy; {{ 2026 }} Sangguniang Kabataan ng Bukal Scholarship Portal
+</footer>
+{% endblock %}

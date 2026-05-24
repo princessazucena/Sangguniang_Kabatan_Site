@@ -1,15 +1,17 @@
 """
 Thin wrapper around the Supabase Python client.
 
-The secret (service-role) key is used server-side only, so all DB
-calls in this app bypass RLS. Never expose this key to the browser.
+We intentionally DO NOT cache the client. The supabase-py client
+mutates its own auth headers when ``auth.sign_in_with_password()``
+is called, so a cached instance starts using the *user's* session
+instead of the service-role key — which makes RLS apply to admin
+operations. A fresh client per request keeps the secret key in
+charge, so server-side calls always bypass RLS.
 """
 import os
-from functools import lru_cache
 from supabase import create_client, Client
 
 
-@lru_cache(maxsize=1)
 def get_supabase() -> Client:
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_SECRET_KEY")

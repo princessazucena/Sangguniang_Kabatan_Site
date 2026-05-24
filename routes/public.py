@@ -1,12 +1,21 @@
 """
-Public routes: home (announcements), sign-up, email verification,
-log-in, log-out.
+Public routes: home, sign-up, email verification, log-in, log-out.
 
-Sign-up flow:
-    1. /signup    -> create unconfirmed auth user, send OTP to email
-    2. /verify    -> verify OTP, create profile row, log the user in
-    3. /resend    -> resend the OTP if needed
+We send our own 6-digit verification code via the Resend HTTP API
+(independent from Supabase's built-in email confirmation).
+
+Flow:
+    /signup  -> create auth user (auto-confirmed in Supabase),
+                create profile with email_verified=false + a fresh code,
+                email the code via Resend.
+    /verify  -> validate the code, set email_verified=true.
+    /login   -> blocks accounts where email_verified=false.
 """
+import os
+import secrets
+from datetime import datetime, timedelta, timezone
+
+import requests
 from flask import (
     Blueprint, render_template, request, redirect,
     url_for, flash, session,
@@ -15,6 +24,8 @@ from flask import (
 from supabase_client import get_supabase
 
 public_bp = Blueprint("public", __name__)
+
+CODE_TTL_MINUTES = 15  # how long a verification code is valid
 
 
 # -----------------------------------------------------------------
@@ -26,6 +37,76 @@ def _build_full_name(first: str, middle: str, last: str, suffix: str) -> str:
     if suffix:
         name = f"{name} {suffix}"
     return name
+
+
+def _generate_code() -> str:
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def _send_verification_email(to_email: str, full_name: str, code: str) -> None:
+    """
+    Send the 6-digit code via Brevo's HTTP API.
+    Raises RuntimeError on failure.
+    """
+    api_key = os.environ.get("BREVO_API_KEY")
+    if not api_key:
+        raise RuntimeError("BREVO_API_KEY is not configured on the server.")
+
+    sender_email = os.environ.get("BREVO_SENDER_EMAIL")
+    sender_name  = os.environ.get(
+        "BREVO_SENDER_NAME", "Sangguniang Kabataan ng Bukal",
+    )
+    if not sender_email:
+        raise RuntimeError("BREVO_SENDER_EMAIL is not configured on the server.")
+
+    html_body = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 480px;">
+        <h2 style="color:#476a40;">Confirm your email</h2>
+        <p>Hi {full_name or 'there'}, use the verification code below to
+           finish creating your Scholarship Portal account:</p>
+        <p style="font-size:28px; font-weight:bold; letter-spacing:8px;
+                  padding:16px 20px; background:#f1f7ef; border-radius:8px;
+                  display:inline-block; color:#476a40; font-family:monospace;">
+            {code}
+        </p>
+        <p style="color:#6b7280; font-size:13px;">
+            This code expires in {CODE_TTL_MINUTES} minutes.
+            If you didn't request this, ignore this email.
+        </p>
+    </div>
+    """
+
+    resp = requests.post(
+        "https://api.brevo.com/v3/smtp/email",
+        headers={
+            "api-key":      api_key,
+            "Content-Type": "application/json",
+            "Accept":       "application/json",
+        },
+        json={
+            "sender":      {"name": sender_name, "email": sender_email},
+            "to":          [{"email": to_email, "name": full_name or to_email}],
+            "subject":     "Your Scholarship Portal verification code",
+            "htmlContent": html_body,
+        },
+        timeout=15,
+    )
+    if resp.status_code >= 300:
+        raise RuntimeError(
+            f"Email provider returned {resp.status_code}: {resp.text}"
+        )
+
+
+def _set_new_code(sb, profile_id: str, email: str, full_name: str) -> None:
+    """Generate a code, store it on the profile, and email it."""
+    code = _generate_code()
+    expires_at = (datetime.now(timezone.utc) + timedelta(minutes=CODE_TTL_MINUTES)).isoformat()
+    sb.table("profiles").update({
+        "verification_code":            code,
+        "verification_code_expires_at": expires_at,
+        "email_verified":               False,
+    }).eq("id", profile_id).execute()
+    _send_verification_email(email, full_name, code)
 
 
 # -----------------------------------------------------------------
@@ -45,7 +126,7 @@ def home():
 
 
 # -----------------------------------------------------------------
-# sign up  (step 1: create auth user, send OTP)
+# sign up
 # -----------------------------------------------------------------
 @public_bp.route("/signup", methods=["GET", "POST"])
 def signup():
@@ -58,10 +139,9 @@ def signup():
             "email":        (request.form.get("email") or "").strip().lower(),
             "facebook_url": (request.form.get("facebook_url") or "").strip(),
         }
-        password    = request.form.get("password") or ""
-        confirm_pw  = request.form.get("password_confirm") or ""
+        password   = request.form.get("password") or ""
+        confirm_pw = request.form.get("password_confirm") or ""
 
-        # ---- validate ----
         if not form["first_name"] or not form["last_name"]:
             flash("First name and last name are required.", "error")
             return render_template("public/signup.html", form=form)
@@ -85,31 +165,48 @@ def signup():
 
         sb = get_supabase()
 
-        # Stash signup details in the session so /verify can finish creating
-        # the profile row after the OTP is confirmed.
-        session["pending_signup"] = {
-            "email":        form["email"],
-            "full_name":    full_name,
-            "first_name":   form["first_name"],
-            "middle_name":  form["middle_name"] or None,
-            "last_name":    form["last_name"],
-            "suffix":       form["suffix"] or None,
-            "facebook_url": form["facebook_url"],
-        }
-
+        # Create the auth user with email_confirm=True so Supabase
+        # doesn't try to send anything itself; we run the verification
+        # ourselves via Resend.
         try:
-            # sign_up triggers Supabase to send the confirmation email
-            # which we configure as a 6-digit token (see README).
-            sb.auth.sign_up({
+            created = sb.auth.admin.create_user({
                 "email": form["email"],
                 "password": password,
-                "options": {
-                    "data": {"full_name": full_name},
-                },
+                "email_confirm": True,
+                "user_metadata": {"full_name": full_name},
             })
+            user = created.user
         except Exception as exc:
             flash(f"Sign-up failed: {exc}", "error")
             return render_template("public/signup.html", form=form)
+
+        # Save the profile with email_verified=False.
+        try:
+            sb.table("profiles").upsert({
+                "id":             user.id,
+                "full_name":      full_name,
+                "first_name":     form["first_name"],
+                "middle_name":    form["middle_name"] or None,
+                "last_name":      form["last_name"],
+                "suffix":         form["suffix"] or None,
+                "facebook_url":   form["facebook_url"],
+                "role":           "student",
+                "email_verified": False,
+            }).execute()
+        except Exception as exc:
+            flash(f"Could not save profile: {exc}", "error")
+            return render_template("public/signup.html", form=form)
+
+        # Generate code + send the email.
+        try:
+            _set_new_code(sb, user.id, form["email"], full_name)
+        except Exception as exc:
+            flash(
+                f"Account was created but we could not send the verification "
+                f"email: {exc}. Tap 'Resend code' on the next page to try again.",
+                "error",
+            )
+            return redirect(url_for("public.verify", email=form["email"]))
 
         flash("We sent a 6-digit code to your email. Enter it below.", "success")
         return redirect(url_for("public.verify", email=form["email"]))
@@ -118,7 +215,7 @@ def signup():
 
 
 # -----------------------------------------------------------------
-# verify  (step 2: confirm OTP, create profile, log in)
+# verify
 # -----------------------------------------------------------------
 @public_bp.route("/verify", methods=["GET", "POST"])
 def verify():
@@ -134,51 +231,61 @@ def verify():
             return render_template("public/verify.html", email=email)
 
         sb = get_supabase()
-        verified_user = None
-        try:
-            res = sb.auth.verify_otp({
-                "email": email,
-                "token": token,
-                "type":  "email",
-            })
-            verified_user = res.user
-        except Exception as exc:
-            # Common case: user clicked the magic link in the email which
-            # already confirmed them, so the token is now "used". Check the
-            # admin API and treat it as success if they're confirmed.
-            try:
-                listing = sb.auth.admin.list_users()
-                users = getattr(listing, "users", None) or listing
-                for u in users:
-                    if (u.email or "").lower() == email and u.email_confirmed_at:
-                        verified_user = u
-                        break
-            except Exception:
-                pass
-            if not verified_user:
-                flash(
-                    "That code is invalid or expired. "
-                    "Tap 'Resend code' to get a new one — and use the code, not the link.",
-                    "error",
-                )
-                return render_template("public/verify.html", email=email)
 
-        if not verified_user:
-            flash("Could not verify the code. Please try again.", "error")
+        # Find the auth user by email so we know which profile to check.
+        try:
+            users = sb.auth.admin.list_users()
+            user_list = getattr(users, "users", None) or users
+            user = next(
+                (u for u in user_list if (u.email or "").lower() == email),
+                None,
+            )
+        except Exception as exc:
+            flash(f"Verification failed: {exc}", "error")
             return render_template("public/verify.html", email=email)
 
-        # Create the matching profiles row using the details we stashed.
-        details = session.pop("pending_signup", {}) or {}
-        sb.table("profiles").upsert({
-            "id":           verified_user.id,
-            "full_name":    details.get("full_name", email),
-            "first_name":   details.get("first_name"),
-            "middle_name":  details.get("middle_name"),
-            "last_name":    details.get("last_name"),
-            "suffix":       details.get("suffix"),
-            "facebook_url": details.get("facebook_url"),
-            "role":         "student",
-        }).execute()
+        if not user:
+            flash("No account found for that email. Please sign up first.", "error")
+            return render_template("public/verify.html", email=email)
+
+        prof = (
+            sb.table("profiles")
+            .select("verification_code, verification_code_expires_at, email_verified, full_name")
+            .eq("id", user.id)
+            .single()
+            .execute()
+        ).data
+
+        if not prof:
+            flash("Profile not found. Please sign up again.", "error")
+            return render_template("public/verify.html", email=email)
+
+        if prof.get("email_verified"):
+            flash("Email already verified. Please log in.", "success")
+            return redirect(url_for("public.login"))
+
+        if not prof.get("verification_code"):
+            flash("No code on file. Tap 'Resend code' to get a fresh one.", "error")
+            return render_template("public/verify.html", email=email)
+
+        # Check expiry
+        expires_str = prof.get("verification_code_expires_at")
+        if expires_str:
+            expires = datetime.fromisoformat(expires_str.replace("Z", "+00:00"))
+            if datetime.now(timezone.utc) > expires:
+                flash("That code has expired. Tap 'Resend code' to get a new one.", "error")
+                return render_template("public/verify.html", email=email)
+
+        if token != prof["verification_code"]:
+            flash("Invalid code. Please try again.", "error")
+            return render_template("public/verify.html", email=email)
+
+        # All good -> mark verified and clear the code.
+        sb.table("profiles").update({
+            "email_verified":               True,
+            "verification_code":            None,
+            "verification_code_expires_at": None,
+        }).eq("id", user.id).execute()
 
         flash("Email verified! You can log in now.", "success")
         return redirect(url_for("public.login"))
@@ -187,7 +294,7 @@ def verify():
 
 
 # -----------------------------------------------------------------
-# resend OTP
+# resend code
 # -----------------------------------------------------------------
 @public_bp.route("/resend", methods=["POST"])
 def resend_code():
@@ -197,8 +304,26 @@ def resend_code():
 
     sb = get_supabase()
     try:
-        sb.auth.resend({"type": "signup", "email": email})
-        flash("New code sent. Check your email — use the 6-digit code, not the link.", "success")
+        users = sb.auth.admin.list_users()
+        user_list = getattr(users, "users", None) or users
+        user = next(
+            (u for u in user_list if (u.email or "").lower() == email),
+            None,
+        )
+        if not user:
+            flash("No account found for that email.", "error")
+            return redirect(url_for("public.signup"))
+
+        prof = (
+            sb.table("profiles").select("full_name, email_verified")
+            .eq("id", user.id).single().execute()
+        ).data
+        if prof and prof.get("email_verified"):
+            flash("Already verified — please log in.", "success")
+            return redirect(url_for("public.login"))
+
+        _set_new_code(sb, user.id, email, (prof or {}).get("full_name", ""))
+        flash("New code sent. Check your email.", "success")
     except Exception as exc:
         flash(f"Could not resend code: {exc}", "error")
 
@@ -220,10 +345,6 @@ def login():
                 "email": email, "password": password,
             })
         except Exception as exc:
-            msg = str(exc)
-            if "Email not confirmed" in msg or "not confirmed" in msg.lower():
-                flash("Please verify your email first. Check your inbox for the code.", "error")
-                return redirect(url_for("public.verify", email=email))
             flash(f"Login failed: {exc}", "error")
             return render_template("public/login.html")
 
@@ -234,7 +355,7 @@ def login():
 
         prof = (
             sb.table("profiles")
-            .select("id, full_name, role")
+            .select("id, full_name, role, email_verified")
             .eq("id", user.id)
             .single()
             .execute()
@@ -242,6 +363,11 @@ def login():
         if not prof.data:
             flash("Profile not found. Contact an admin.", "error")
             return render_template("public/login.html")
+
+        # Block login if email is not verified yet.
+        if not prof.data.get("email_verified"):
+            flash("Please verify your email before logging in.", "error")
+            return redirect(url_for("public.verify", email=email))
 
         session.clear()
         session["user_id"]   = user.id

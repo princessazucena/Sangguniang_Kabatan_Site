@@ -31,6 +31,13 @@ create table if not exists public.applications (
     student_id uuid not null references public.profiles(id) on delete cascade,
     status text not null default 'pending'
         check (status in ('pending','verified','rejected')),
+    education_level text
+        check (education_level in ('senior_high','college')),
+    year_level text
+        check (year_level in (
+            'grade_11','grade_12',
+            'year_1','year_2','year_3','year_4','year_5'
+        )),
     notes text,
     reviewed_by uuid references public.profiles(id) on delete set null,
     reviewed_at timestamptz,
@@ -43,6 +50,7 @@ create table if not exists public.application_files (
     id bigserial primary key,
     application_id bigint not null references public.applications(id) on delete cascade,
     student_id uuid not null references public.profiles(id) on delete cascade,
+    slot text check (slot in ('card','id','indigency','psa','cor')),
     file_name text not null,
     storage_path text not null,
     mime_type text,
@@ -51,6 +59,7 @@ create table if not exists public.application_files (
 );
 
 create index if not exists idx_app_files_app on public.application_files(application_id);
+create index if not exists idx_app_files_slot on public.application_files(application_id, slot);
 create index if not exists idx_announcements_created on public.announcements(created_at desc);
 
 -- Storage bucket for the uploaded documents.

@@ -9,55 +9,97 @@
 
 {% block student_content %}
 <div class="grid md:grid-cols-3 gap-6">
-    <section class="md:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-slate-100">
-        <div class="flex items-center justify-between mb-4">
-            <h1 class="text-2xl font-bold">My application</h1>
-            <span class="text-xs uppercase tracking-wide px-2 py-1 rounded {{ status_styles.get(application.status, 'bg-slate-100 text-slate-700') }}">
-                {{ application.status }}
-            </span>
+    <section class="md:col-span-2 space-y-4">
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-100">
+            <div class="flex items-start justify-between gap-3 mb-3 flex-wrap">
+                <div>
+                    <h1 class="text-2xl font-bold">My application</h1>
+                    <p class="text-sm text-slate-500 mt-1">
+                        {{ level_label }} · {{ year_label }}
+                        <form method="post" action="{{ url_for('student.reset_level') }}" class="inline">
+                            <button type="submit"
+                                    class="ml-2 text-xs text-brand-600 hover:underline"
+                                    onclick="return confirm('Change your level? Uploaded files will stay.');">
+                                Change
+                            </button>
+                        </form>
+                    </p>
+                </div>
+                <span class="text-xs uppercase tracking-wide px-2 py-1 rounded {{ status_styles.get(application.status, 'bg-slate-100 text-slate-700') }}">
+                    {{ application.status }}
+                </span>
+            </div>
+
+            {% if application.notes %}
+                <div class="p-3 rounded-md bg-slate-50 border border-slate-200 text-sm">
+                    <p class="font-medium text-slate-700 mb-1">Reviewer notes</p>
+                    <p class="text-slate-600 whitespace-pre-line">{{ application.notes }}</p>
+                </div>
+            {% endif %}
         </div>
 
-        {% if application.notes %}
-            <div class="mb-4 p-3 rounded-md bg-slate-50 border border-slate-200 text-sm">
-                <p class="font-medium text-slate-700 mb-1">Reviewer notes</p>
-                <p class="text-slate-600 whitespace-pre-line">{{ application.notes }}</p>
-            </div>
-        {% endif %}
+        <h2 class="text-lg font-semibold">Required documents</h2>
 
-        <h2 class="font-semibold mb-2">Uploaded documents</h2>
-        {% if files %}
-            <ul class="divide-y divide-slate-100 mb-4">
-                {% for f in files %}
-                    <li class="py-2 flex items-center justify-between text-sm">
-                        <span class="truncate">{{ f.file_name }}</span>
-                        <span class="text-slate-500">{{ (f.size_bytes or 0) // 1024 }} KB</span>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p class="text-sm text-slate-500 mb-4">No documents uploaded yet.</p>
-        {% endif %}
+        <div class="space-y-3">
+            {% for s in slots %}
+                {% set is_image = s.kind == 'image' %}
+                {% set accept = 'image/*' if is_image else 'application/pdf' %}
+                <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+                    <div class="flex items-start justify-between gap-3 flex-wrap">
+                        <div class="flex items-start gap-3 min-w-0">
+                            <span class="w-9 h-9 rounded-md bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
+                                <i class="fa-solid {{ 'fa-id-card' if is_image else 'fa-file-pdf' }}"></i>
+                            </span>
+                            <div class="min-w-0">
+                                <p class="font-medium">{{ s.label }}</p>
+                                <p class="text-xs text-slate-500">
+                                    {% if is_image %}
+                                        Kunan ng litrato gamit ang camera, o mag-upload ng image (JPG/PNG).
+                                    {% else %}
+                                        PDF file lamang. Max 10 MB.
+                                    {% endif %}
+                                </p>
+                                {% if s.file %}
+                                    <p class="text-xs text-slate-600 mt-1 truncate">
+                                        <i class="fa-solid fa-circle-check text-green-600 mr-1"></i>
+                                        {{ s.file.file_name }}
+                                        <span class="text-slate-400">· {{ (s.file.size_bytes or 0) // 1024 }} KB</span>
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded
+                                     {% if s.file %}bg-green-100 text-green-800{% else %}bg-slate-100 text-slate-600{% endif %}">
+                            {% if s.file %}Uploaded{% else %}Missing{% endif %}
+                        </span>
+                    </div>
 
-        <form method="post" action="{{ url_for('student.upload') }}"
-              enctype="multipart/form-data"
-              class="border-t pt-4 flex flex-col sm:flex-row gap-3 sm:items-center">
-            <input type="file" name="document" required
-                   class="block text-sm file:mr-3 file:px-3 file:py-1.5 file:rounded-md
-                          file:border-0 file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100" />
-            <button type="submit"
-                    class="px-4 py-2 rounded-md bg-brand-500 text-white hover:bg-brand-600 text-sm font-medium">
-                Upload document
-            </button>
-        </form>
+                    <form method="post" action="{{ url_for('student.upload', slot=s.key) }}"
+                          enctype="multipart/form-data"
+                          class="mt-3 flex flex-col sm:flex-row gap-2 sm:items-center">
+                        <input type="file" name="document" required
+                               accept="{{ accept }}"
+                               {% if is_image %}capture="environment"{% endif %}
+                               class="block text-sm w-full sm:w-auto file:mr-3 file:px-3 file:py-1.5 file:rounded-md
+                                      file:border-0 file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100" />
+                        <button type="submit"
+                                class="px-4 py-2 rounded-md bg-brand-500 text-white hover:bg-brand-600 text-sm font-medium whitespace-nowrap">
+                            <i class="fa-solid {{ 'fa-camera' if is_image else 'fa-upload' }} mr-1"></i>
+                            {% if s.file %}Replace{% else %}Upload{% endif %}
+                        </button>
+                    </form>
+                </div>
+            {% endfor %}
+        </div>
     </section>
 
-    <aside class="bg-white rounded-xl shadow-sm p-6 border border-slate-100">
+    <aside class="bg-white rounded-xl shadow-sm p-6 border border-slate-100 h-fit">
         <h2 class="font-semibold mb-2">What happens next?</h2>
         <ol class="list-decimal list-inside text-sm text-slate-600 space-y-1">
-            <li>Upload all required documents.</li>
-            <li>An admin reviews your submission.</li>
-            <li>Status updates to <em>verified</em> or <em>rejected</em>.</li>
-            <li>Check announcements for results.</li>
+            <li>I-upload ang lahat ng kinakailangang dokumento.</li>
+            <li>Susuriin ng admin ang iyong submission.</li>
+            <li>Magbabago ang status sa <em>verified</em> o <em>rejected</em>.</li>
+            <li>Tingnan ang announcements para sa resulta.</li>
         </ol>
     </aside>
 </div>
