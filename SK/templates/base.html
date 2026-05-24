@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Scholarship Portal{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800">
+    <header class="bg-white shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <a href="{{ url_for('public.home') }}" class="flex items-center gap-2">
+                <span class="inline-block w-8 h-8 rounded-lg bg-indigo-600"></span>
+                <span class="font-semibold text-lg">Scholarship Portal</span>
+            </a>
+            <nav class="flex items-center gap-4 text-sm">
+                <a href="{{ url_for('public.home') }}" class="hover:text-indigo-600">Announcements</a>
+                {% if session.get('role') == 'student' %}
+                    <a href="{{ url_for('student.dashboard') }}" class="hover:text-indigo-600">My Application</a>
+                    <span class="text-slate-500">Hi, {{ session.get('full_name') }}</span>
+                    <a href="{{ url_for('public.logout') }}" class="px-3 py-1.5 rounded-md bg-slate-200 hover:bg-slate-300">Log out</a>
+                {% elif session.get('role') == 'admin' %}
+                    <a href="{{ url_for('admin.dashboard') }}" class="hover:text-indigo-600">Applications</a>
+                    <a href="{{ url_for('admin.announcements') }}" class="hover:text-indigo-600">Announcements</a>
+                    <span class="text-slate-500">Admin: {{ session.get('full_name') }}</span>
+                    <a href="{{ url_for('public.logout') }}" class="px-3 py-1.5 rounded-md bg-slate-200 hover:bg-slate-300">Log out</a>
+                {% else %}
+                    <a href="{{ url_for('public.login') }}" class="hover:text-indigo-600">Log in</a>
+                    <a href="{{ url_for('public.signup') }}" class="px-3 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">Sign up</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="max-w-6xl mx-auto px-4 mt-4 space-y-2">
+                {% for category, msg in messages %}
+                    <div class="px-4 py-2 rounded-md text-sm
+                        {% if category == 'error' %}bg-red-100 text-red-800
+                        {% elif category == 'success' %}bg-green-100 text-green-800
+                        {% else %}bg-slate-100 text-slate-800{% endif %}">
+                        {{ msg }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="text-center text-xs text-slate-500 py-6">
+        &copy; {{ 2026 }} Scholarship Portal
+    </footer>
+</body>
+</html>
