@@ -9,7 +9,7 @@
 
 {% block hero %}
 <section id="hero-slider"
-         class="relative w-screen overflow-hidden shadow h-[420px]">
+         class="relative w-screen overflow-hidden shadow h-[260px] sm:h-[360px] md:h-[420px]">
     {% for slide in slides %}
         <div class="slide absolute inset-0 transition-opacity duration-700
                     {% if loop.first %}opacity-100{% else %}opacity-0{% endif %}">
@@ -19,19 +19,19 @@
         </div>
     {% endfor %}
 
-    <div class="relative h-full max-w-6xl mx-auto flex flex-col justify-center px-8 py-16 text-white">
-        <h1 class="text-3xl md:text-4xl font-bold drop-shadow">Apply for your scholarship</h1>
-        <p class="mt-2 max-w-2xl text-brand-100 drop-shadow">
+    <div class="relative h-full max-w-6xl mx-auto flex flex-col justify-center px-5 sm:px-8 py-10 sm:py-16 text-white">
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold drop-shadow">Apply for your scholarship</h1>
+        <p class="mt-2 max-w-2xl text-xs sm:text-base text-brand-100 drop-shadow">
             Submit your documents online, track your application status, and stay
             updated through official announcements from the scholarship office.
         </p>
     </div>
 
-    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+    <div class="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
         {% for slide in slides %}
             <button type="button"
                     data-index="{{ loop.index0 }}"
-                    class="slide-dot w-2.5 h-2.5 rounded-full bg-white/50 hover:bg-white transition
+                    class="slide-dot w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-white/50 hover:bg-white transition
                            {% if loop.first %}!bg-white{% endif %}"
                     aria-label="Go to slide {{ loop.index }}"></button>
         {% endfor %}
@@ -57,50 +57,50 @@
     'general':      'bg-slate-100 text-slate-700',
 } %}
 
-<h2 class="text-xl font-semibold mb-4 text-brand-700">Latest announcements</h2>
+<h2 class="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-brand-700">Latest announcements</h2>
 {% if announcements %}
-    <div class="space-y-4">
+    <div class="space-y-3 sm:space-y-4">
         {% for a in announcements %}
-            <article class="bg-white rounded-lg shadow-sm p-5 border border-slate-100">
-                <div class="flex items-start justify-between gap-3 flex-wrap">
+            <article class="bg-white rounded-lg shadow-sm p-3 sm:p-5 border border-slate-100">
+                <div class="flex items-start justify-between gap-2 sm:gap-3 flex-wrap">
                     <div class="min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap mb-1">
-                            <span class="text-xs px-2 py-0.5 rounded {{ category_styles.get(a.category, 'bg-slate-100 text-slate-700') }}">
+                        <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-1">
+                            <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded {{ category_styles.get(a.category, 'bg-slate-100 text-slate-700') }}">
                                 {{ category_labels.get(a.category, 'General') }}
                             </span>
                             {% if a.status != 'unscheduled' %}
-                                <span class="text-xs uppercase px-2 py-0.5 rounded {{ status_styles.get(a.status, 'bg-slate-100 text-slate-700') }}">
+                                <span class="text-[10px] sm:text-xs uppercase px-2 py-0.5 rounded {{ status_styles.get(a.status, 'bg-slate-100 text-slate-700') }}">
                                     {{ a.status }}
                                 </span>
                             {% endif %}
                         </div>
-                        <h3 class="font-semibold text-lg">{{ a.title }}</h3>
+                        <h3 class="font-semibold text-base sm:text-lg">{{ a.title }}</h3>
                     </div>
-                    <time class="text-xs text-slate-500 whitespace-nowrap">{{ a.created_at | ph_date }}</time>
+                    <time class="text-[11px] sm:text-xs text-slate-500 whitespace-nowrap">{{ a.created_at | ph_date }}</time>
                 </div>
                 {% if a.start_at and a.end_at %}
-                    <p class="text-xs text-slate-500 mt-1">
+                    <p class="text-[11px] sm:text-xs text-slate-500 mt-1">
                         <i class="fa-regular fa-calendar mr-1"></i>
                         {{ a.start_at | ph }} → {{ a.end_at | ph }}
                     </p>
                 {% endif %}
-                <p class="mt-2 text-slate-700 whitespace-pre-line">{{ a.body }}</p>
+                <p class="mt-2 text-sm text-slate-700 whitespace-pre-line">{{ a.body }}</p>
 
                 {% if a.category == 'registration' %}
                     <div class="mt-3">
                         {% if a.status == 'open' %}
                             <a href="{{ url_for('public.login', next=url_for('student.dashboard')) }}"
-                               class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium">
+                               class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-xs sm:text-sm font-medium">
                                 <i class="fa-solid fa-paper-plane"></i> Apply now
                             </a>
                         {% elif a.status == 'upcoming' %}
                             <button type="button" disabled
-                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-200 text-slate-500 text-sm font-medium cursor-not-allowed">
+                                    class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-slate-200 text-slate-500 text-xs sm:text-sm font-medium cursor-not-allowed">
                                 <i class="fa-regular fa-clock"></i> Opens {{ a.start_at | ph_date }}
                             </button>
                         {% else %}
                             <button type="button" disabled
-                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-200 text-slate-500 text-sm font-medium cursor-not-allowed">
+                                    class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-slate-200 text-slate-500 text-xs sm:text-sm font-medium cursor-not-allowed">
                                 <i class="fa-solid fa-lock"></i> Registration closed
                             </button>
                         {% endif %}
@@ -109,17 +109,17 @@
                     <div class="mt-3">
                         {% if a.status == 'open' %}
                             <a href="{{ url_for('public.login', next=url_for('student.announcements')) }}"
-                               class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium">
+                               class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-medium">
                                 <i class="fa-solid fa-handshake"></i> Log in to join
                             </a>
                         {% elif a.status == 'upcoming' %}
                             <button type="button" disabled
-                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-200 text-slate-500 text-sm font-medium cursor-not-allowed">
+                                    class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-slate-200 text-slate-500 text-xs sm:text-sm font-medium cursor-not-allowed">
                                 <i class="fa-regular fa-clock"></i> Opens {{ a.start_at | ph_date }}
                             </button>
                         {% else %}
                             <button type="button" disabled
-                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-200 text-slate-500 text-sm font-medium cursor-not-allowed">
+                                    class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-slate-200 text-slate-500 text-xs sm:text-sm font-medium cursor-not-allowed">
                                 <i class="fa-solid fa-lock"></i> Pay-out closed
                             </button>
                         {% endif %}
@@ -129,7 +129,7 @@
         {% endfor %}
     </div>
 {% else %}
-    <p class="text-slate-500">No announcements yet. Check back later.</p>
+    <p class="text-slate-500 text-sm">No announcements yet. Check back later.</p>
 {% endif %}
 
 <script>

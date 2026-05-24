@@ -372,7 +372,7 @@ def login():
 
         prof = (
             sb.table("profiles")
-            .select("id, full_name, role, email_verified")
+            .select("id, full_name, role, email_verified, is_active")
             .eq("id", user.id)
             .single()
             .execute()
@@ -385,6 +385,13 @@ def login():
         if not prof.data.get("email_verified"):
             flash("Please verify your email before logging in.", "error")
             return redirect(url_for("public.verify", email=email))
+
+        # Block deactivated accounts (admin can deactivate from user mgmt).
+        # ``is_active`` defaults to True; treat missing values as active so
+        # legacy rows still work before the migration runs.
+        if prof.data.get("is_active") is False:
+            flash("Naka-deactivate ang iyong account. Mag-message sa admin.", "error")
+            return render_template("public/login.html", next=next_url)
 
         session.clear()
         session["user_id"]   = user.id

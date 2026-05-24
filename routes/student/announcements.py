@@ -1,0 +1,73 @@
+"""
+Student → Announcements sidebar button.
+
+Lists every announcement and lets students join a pay-out window.
+"""
+from flask import render_template, redirect, url_for, flash, session
+
+from supabase_client import get_supabase
+from services.announcements import annotate, schedule_status
+
+from ._common import student_bp, student_required
+
+
+@student_bp.route("/announcements")
+@student_required
+def announcements():
+    sb = get_supabase()
+    items = (
+        sb.table("announcements")
+        .select("*")
+        .order("created_at", desc=True)
+        .limit(50)
+        .execute()
+    ).data or []
+    annotate(items)
+
+    student_id = session["user_id"]
+    joined_ids: set[int] = set()
+    payout_ids = [a["id"] for a in items if a.get("category") == "payout"]
+    if payout_ids:
+        rows = (
+            sb.table("announcement_joins")
+            .select("announcement_id")
+            .eq("student_id", student_id)
+            .in_("announcement_id", payout_ids)
+            .execute()
+        ).data or []
+        joined_ids = {r["announcement_id"] for r in rows}
+
+    return render_template(
+        "student/announcements.html",
+        announcements=items,
+        joined_ids=joined_ids,
+    )
+
+
+@student_bp.route("/announcements/<int:anc_id>/join", methods=["POST"])
+@student_required
+def join_payout(anc_id: int):
+    sb = get_supabase()
+    anc = (
+        sb.table("announcements").select("*").eq("id", anc_id).single().execute()
+    ).data
+    if not anc or anc.get("category") != "payout":
+        flash("That announcement does not accept joiners.", "error")
+        return redirect(url_for("student.announcements"))
+
+    if schedule_status(anc) != "open":
+        flash("Hindi pa o tapos na ang join window para sa announcement na ito.", "error")
+        return redirect(url_for("student.announcements"))
+
+    student_id = session["user_id"]
+    try:
+        sb.table("announcement_joins").insert({
+            "announcement_id": anc_id,
+            "student_id":      student_id,
+        }).execute()
+        flash("You're on the list. Check announcements again on the payout date.", "success")
+    except Exception:
+        # Likely a duplicate (unique constraint) — treat as success.
+        flash("You already joined this pay-out.", "success")
+
+    return redirect(url_for("student.announcements"))

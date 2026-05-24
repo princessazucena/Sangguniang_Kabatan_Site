@@ -40,10 +40,12 @@ create table if not exists public.announcement_joins (
 create index if not exists idx_anc_joins_anc on public.announcement_joins(announcement_id);
 create index if not exists idx_anc_joins_student on public.announcement_joins(student_id);
 
--- One scholarship application per student (extend as you like).
+-- Scholarship applications. A student can submit one application per
+-- open registration window (announcement of category 'registration').
 create table if not exists public.applications (
     id bigserial primary key,
     student_id uuid not null references public.profiles(id) on delete cascade,
+    registration_id bigint references public.announcements(id) on delete set null,
     status text not null default 'pending'
         check (status in ('pending','verified','rejected')),
     education_level text
@@ -57,8 +59,13 @@ create table if not exists public.applications (
     reviewed_by uuid references public.profiles(id) on delete set null,
     reviewed_at timestamptz,
     created_at timestamptz not null default now(),
-    unique (student_id)
+    unique (student_id, registration_id)
 );
+
+create index if not exists idx_applications_student_created
+    on public.applications(student_id, created_at desc);
+create index if not exists idx_applications_registration
+    on public.applications(registration_id);
 
 -- Files uploaded by students for their application.
 create table if not exists public.application_files (

@@ -45,18 +45,26 @@
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-800 overflow-x-hidden {% block body_class %}{% endblock %}">
     <header class="bg-white shadow-sm border-b-4 border-brand-400 sticky top-0 z-40">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-            <a href="{% if session.get('role') == 'student' %}{{ url_for('student.announcements') }}{% elif session.get('role') == 'admin' %}{{ url_for('admin.dashboard') }}{% else %}{{ url_for('public.home') }}{% endif %}" class="flex items-center gap-2">
+        <div class="max-w-6xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2">
+            <a href="{% if session.get('role') == 'student' %}{{ url_for('student.announcements') }}{% elif session.get('role') == 'admin' %}{{ url_for('admin.dashboard') }}{% else %}{{ url_for('public.home') }}{% endif %}" class="flex items-center gap-2 min-w-0">
                 <img src="{{ url_for('static', filename='images/411138383_122115055322131251_5783589540994116709_n.jpg') }}"
-                     alt="Logo" class="h-9 w-auto rounded-md object-cover" />
-                <span class="font-semibold text-lg text-brand-700 leading-tight">Sangguniang Kabataan ng Bukal<br/><span class="text-sm font-medium text-brand-600">Scholarship Portal</span></span>
+                     alt="Logo" class="h-8 sm:h-9 w-auto rounded-md object-cover shrink-0" />
+                <span class="font-semibold text-sm sm:text-lg text-brand-700 leading-tight truncate">
+                    <span class="block truncate">Sangguniang Kabataan ng Bukal</span>
+                    <span class="block text-[11px] sm:text-sm font-medium text-brand-600">Scholarship Portal</span>
+                </span>
             </a>
-            <nav class="flex items-center gap-4 text-sm">
+            <nav class="flex items-center gap-2 sm:gap-4 text-sm shrink-0">
                 {% if session.get('role') == 'student' %}
                     <span class="hidden sm:inline text-slate-500">Hi, {{ session.get('full_name') }}</span>
                 {% elif session.get('role') == 'admin' %}
                     <span class="hidden sm:inline text-slate-500">Admin: {{ session.get('full_name') }}</span>
                 {% else %}
+                    <button type="button" data-about-open
+                            class="inline-flex items-center gap-1.5 px-2 sm:px-3 h-9 rounded-md text-brand-700 hover:bg-brand-50 font-medium">
+                        <i class="fa-regular fa-circle-question"></i>
+                        <span class="hidden sm:inline">About Us</span>
+                    </button>
                     <a href="{{ url_for('public.login') }}"
                        class="inline-flex items-center justify-center w-9 h-9 rounded-md bg-brand-500 text-white hover:bg-brand-600"
                        title="Log in" aria-label="Log in">
@@ -69,9 +77,9 @@
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-            <div class="max-w-6xl mx-auto px-4 mt-4 space-y-2">
+            <div class="max-w-6xl mx-auto px-3 sm:px-4 mt-3 space-y-2">
                 {% for category, msg in messages %}
-                    <div class="px-4 py-2 rounded-md text-sm
+                    <div class="px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm
                         {% if category == 'error' %}bg-red-100 text-red-800
                         {% elif category == 'success' %}bg-green-100 text-green-800
                         {% else %}bg-slate-100 text-slate-800{% endif %}">
@@ -85,7 +93,7 @@
     {% block hero %}{% endblock %}
 
     {% block main %}
-    <main class="max-w-6xl mx-auto px-4 py-8">
+    <main class="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
         {% block content %}{% endblock %}
     </main>
     {% endblock %}
@@ -93,14 +101,7 @@
     {% block footer %}
     {% if not session.get('user_id') %}
     <footer class="text-center text-xs text-slate-500 py-6">
-        <div class="flex items-center justify-center gap-3">
-            <span>&copy; {{ 2026 }} Sangguniang Kabataan ng Bukal Scholarship Portal</span>
-            <span class="text-slate-300">·</span>
-            <button type="button" data-about-open
-                    class="text-brand-600 hover:underline">
-                About Us
-            </button>
-        </div>
+        <span>&copy; {{ 2026 }} Sangguniang Kabataan ng Bukal Scholarship Portal</span>
     </footer>
     {% endif %}
     {% endblock %}

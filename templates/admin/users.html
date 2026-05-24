@@ -1,0 +1,98 @@
+{% extends "admin/_layout.html" %}
+{% block title %}User management · Admin{% endblock %}
+
+{% block admin_content %}
+<div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+    <div>
+        <h1 class="text-2xl font-bold text-brand-700">User management</h1>
+        <p class="text-sm text-slate-500">Manage student accounts — view details, deactivate, or delete.</p>
+    </div>
+</div>
+
+{# Stat cards #}
+<div class="grid sm:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow-sm p-4 border border-slate-100">
+        <div class="text-xs uppercase tracking-wide text-slate-500">Total students</div>
+        <div class="text-3xl font-bold mt-1">{{ counts.total }}</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-4 border border-slate-100">
+        <div class="text-xs uppercase tracking-wide text-slate-500">Active</div>
+        <div class="text-3xl font-bold mt-1 text-green-700">{{ counts.active }}</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-4 border border-slate-100">
+        <div class="text-xs uppercase tracking-wide text-slate-500">Deactivated</div>
+        <div class="text-3xl font-bold mt-1 text-red-700">{{ counts.deactivated }}</div>
+    </div>
+</div>
+
+<section class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="px-5 py-3 border-b flex items-center justify-between gap-3 flex-wrap">
+        <span class="font-semibold">Students</span>
+        <form method="get" class="flex items-center gap-2">
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" name="q" value="{{ query }}" placeholder="Search name or email"
+                       class="pl-8 pr-3 py-1.5 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+            </div>
+            {% if query %}
+                <a href="{{ url_for('admin.users') }}" class="text-xs text-slate-500 hover:underline">Clear</a>
+            {% endif %}
+        </form>
+    </div>
+
+    {% if students %}
+        <div class="overflow-x-auto max-h-[40rem] overflow-y-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-slate-600 text-left sticky top-0 z-10">
+                    <tr>
+                        <th class="px-5 py-2">Student</th>
+                        <th class="px-5 py-2">Email</th>
+                        <th class="px-5 py-2">Applications</th>
+                        <th class="px-5 py-2">Joined</th>
+                        <th class="px-5 py-2">Status</th>
+                        <th class="px-5 py-2"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100"
+                       data-paginate data-page-size="15"
+                       data-pagination-into="#users-pagination">
+                    {% for s in students %}
+                        <tr data-page-item>
+                            <td class="px-5 py-2">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span class="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold shrink-0">
+                                        {{ (s.first_name or s.full_name or '?')[:1] | upper }}{{ (s.last_name or '')[:1] | upper }}
+                                    </span>
+                                    <span class="font-medium truncate">{{ s.full_name or '—' }}</span>
+                                </div>
+                            </td>
+                            <td class="px-5 py-2 text-slate-600 truncate">{{ s.email or '—' }}</td>
+                            <td class="px-5 py-2 text-slate-500">{{ s.app_count }}</td>
+                            <td class="px-5 py-2 text-slate-500">{{ s.created_at | ph_date }}</td>
+                            <td class="px-5 py-2">
+                                {% if s.is_active %}
+                                    <span class="text-xs uppercase px-2 py-1 rounded bg-green-100 text-green-800">Active</span>
+                                {% else %}
+                                    <span class="text-xs uppercase px-2 py-1 rounded bg-red-100 text-red-800">Deactivated</span>
+                                {% endif %}
+                                {% if not s.email_verified %}
+                                    <span class="text-xs uppercase px-2 py-1 rounded bg-amber-100 text-amber-800 ml-1">Unverified</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-5 py-2 text-right whitespace-nowrap">
+                                <a href="{{ url_for('admin.user_detail', student_id=s.id) }}"
+                                   class="text-brand-600 hover:underline">View</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div id="users-pagination"></div>
+    {% else %}
+        <p class="px-5 py-6 text-slate-500 text-sm">
+            {% if query %}Walang student na tumugma sa "{{ query }}".{% else %}No students yet.{% endif %}
+        </p>
+    {% endif %}
+</section>
+{% endblock %}

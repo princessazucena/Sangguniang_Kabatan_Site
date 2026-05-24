@@ -2,36 +2,45 @@
 {% block title %}Choose your level · Sangguniang Kabataan ng Bukal Scholarship Portal{% endblock %}
 
 {% block student_content %}
-{% if not open_registration %}
+<div class="mb-4">
+    <a href="{{ url_for('student.dashboard') }}"
+       class="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-brand-700">
+        <i class="fa-solid fa-arrow-left"></i>
+        Back to my applications
+    </a>
+</div>
+
+{% if not window_open %}
     <div class="mb-4 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-sm flex items-start gap-3">
         <i class="fa-solid fa-lock mt-0.5"></i>
         <div>
-            <p class="font-semibold">Sarado pa o tapos na ang scholarship registration.</p>
-            <p>Maaari mong i-set ang iyong level pero hindi ka pa pwedeng mag-submit hangga't hindi pa bukas ang registration window.</p>
+            <p class="font-semibold">Sarado na ang registration window para sa application na ito.</p>
+            <p>Hindi mo na pwedeng baguhin ang application na ito.</p>
         </div>
     </div>
 {% endif %}
-<section class="bg-white rounded-xl shadow-sm p-6 border border-slate-100 max-w-2xl">
-    <h1 class="text-2xl font-bold mb-1">Tell us about your studies</h1>
-    <p class="text-sm text-slate-500 mb-5">
+<section class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-slate-100 max-w-2xl">
+    <h1 class="text-lg sm:text-2xl font-bold mb-1">Tell us about your studies</h1>
+    <p class="text-xs sm:text-sm text-slate-500 mb-4 sm:mb-5">
         Pumili ng iyong education level at kasalukuyang year. Magbabago ang
         kakailanganing dokumento depende sa pipiliin mo.
     </p>
 
-    <form method="post" action="{{ url_for('student.set_level') }}" class="space-y-5"
-          id="level-form">
+    <form method="post" action="{{ url_for('student.set_level', app_id=application.id) }}"
+          class="space-y-4 sm:space-y-5" id="level-form">
         <div>
             <p class="text-sm font-medium mb-2">Education level</p>
-            <div class="grid sm:grid-cols-2 gap-3">
+            <div class="grid sm:grid-cols-2 gap-2 sm:gap-3">
                 {% for key, label in [('senior_high', 'Senior High School'), ('college', 'College')] %}
-                    <label class="flex items-start gap-3 border border-slate-200 rounded-lg p-3 cursor-pointer hover:border-brand-400 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
+                    <label class="flex items-start gap-2 sm:gap-3 border border-slate-200 rounded-lg p-2.5 sm:p-3 cursor-pointer hover:border-brand-400 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
                         <input type="radio" name="education_level" value="{{ key }}"
                                class="mt-1" required
                                data-level-radio
-                               {% if application.education_level == key %}checked{% endif %} />
+                               {% if application.education_level == key %}checked{% endif %}
+                               {% if not window_open %}disabled{% endif %} />
                         <span>
-                            <span class="font-medium block">{{ label }}</span>
-                            <span class="text-xs text-slate-500">
+                            <span class="font-medium block text-sm">{{ label }}</span>
+                            <span class="text-[11px] sm:text-xs text-slate-500">
                                 {% if key == 'senior_high' %}Grade 11 or Grade 12{% else %}1st to 5th year{% endif %}
                             </span>
                         </span>
@@ -43,7 +52,8 @@
         <div>
             <label class="block text-sm font-medium mb-1">Year level</label>
             <select name="year_level" id="year-select" required
-                    class="w-full sm:w-64 rounded-md border border-slate-300 px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+                    {% if not window_open %}disabled{% endif %}
+                    class="w-full sm:w-64 rounded-md border border-slate-300 px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 disabled:bg-slate-100 disabled:text-slate-400">
                 <option value="">— Pick your level first —</option>
                 {% for level_key, opts in year_options.items() %}
                     {% for value, label in opts %}
@@ -57,7 +67,9 @@
         </div>
 
         <button type="submit"
-                class="px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium">
+                {% if not window_open %}disabled{% endif %}
+                class="px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium
+                       disabled:bg-slate-300 disabled:cursor-not-allowed">
             Save and continue
         </button>
     </form>

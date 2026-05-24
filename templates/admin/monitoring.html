@@ -1,0 +1,219 @@
+{% extends "admin/_layout.html" %}
+{% block title %}Monitoring · Admin{% endblock %}
+
+{% set status_styles = {
+    'open':        'bg-green-100 text-green-800',
+    'upcoming':    'bg-amber-100 text-amber-800',
+    'closed':      'bg-slate-200 text-slate-700',
+    'unscheduled': 'bg-slate-100 text-slate-600',
+} %}
+
+{% macro stat_card(label, value, icon, tone='brand') %}
+    {% set tone_styles = {
+        'brand': 'bg-brand-50 text-brand-700',
+        'blue':  'bg-blue-50 text-blue-700',
+        'green': 'bg-green-50 text-green-700',
+        'slate': 'bg-slate-100 text-slate-700',
+    } %}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex items-center gap-3">
+        <span class="w-10 h-10 rounded-md flex items-center justify-center {{ tone_styles.get(tone, tone_styles['brand']) }}">
+            <i class="fa-solid {{ icon }}"></i>
+        </span>
+        <div>
+            <p class="text-xs uppercase tracking-wide text-slate-500">{{ label }}</p>
+            <p class="text-2xl font-bold leading-tight">{{ value }}</p>
+        </div>
+    </div>
+{% endmacro %}
+
+{% macro breakdown_list(rows, total) %}
+    {% if rows %}
+        <ul class="space-y-2">
+            {% for r in rows %}
+                {% set pct = (r.count * 100 / total) if total else 0 %}
+                <li>
+                    <div class="flex items-center justify-between text-sm mb-1">
+                        <span class="text-slate-700">{{ r.label }}</span>
+                        <span class="font-semibold">
+                            {{ r.count }}
+                            <span class="text-xs text-slate-400 font-normal">({{ '%.0f' % pct }}%)</span>
+                        </span>
+                    </div>
+                    <div class="h-1.5 rounded bg-slate-100 overflow-hidden">
+                        <div class="h-full bg-brand-400" style="width: {{ pct }}%;"></div>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-sm text-slate-500">Walang data pa.</p>
+    {% endif %}
+{% endmacro %}
+
+{% block admin_content %}
+<div class="mb-5">
+    <h1 class="text-2xl font-bold text-brand-700">Monitoring</h1>
+    <p class="text-sm text-slate-500">Buod ng mga verified scholars at pay-out participation.</p>
+</div>
+
+{# ---------- Tab switcher ---------- #}
+<div class="flex gap-2 mb-5 border-b border-slate-200" role="tablist">
+    <button type="button" data-tab-btn data-target="tab-scholars"
+            class="px-4 py-2 text-sm font-medium text-brand-700 border-b-2 border-brand-500 -mb-px">
+        <i class="fa-solid fa-graduation-cap mr-1"></i>
+        Verified scholars
+    </button>
+    <button type="button" data-tab-btn data-target="tab-payouts"
+            class="px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent -mb-px">
+        <i class="fa-solid fa-hand-holding-dollar mr-1"></i>
+        Pay-out joiners
+    </button>
+</div>
+
+{# ===================== Verified scholars tab ===================== #}
+<section data-tab-panel id="tab-scholars" class="space-y-5">
+
+    <div class="grid sm:grid-cols-3 gap-4">
+        {{ stat_card('Verified scholars', verified_total, 'fa-circle-check', 'green') }}
+        {{ stat_card('Unique students', verified_unique_students, 'fa-user-graduate', 'brand') }}
+        {{ stat_card('Registration windows', registration_breakdown | length, 'fa-clipboard-list', 'blue') }}
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5">
+            <h2 class="font-semibold mb-3">By education level</h2>
+            {{ breakdown_list(level_breakdown, verified_total) }}
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5">
+            <h2 class="font-semibold mb-3">By year level</h2>
+            {{ breakdown_list(year_breakdown, verified_total) }}
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5">
+        <h2 class="font-semibold mb-3">By registration window</h2>
+        {{ breakdown_list(registration_breakdown, verified_total) }}
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <header class="px-5 py-3 border-b flex items-center justify-between">
+            <h2 class="font-semibold">Verified scholar list</h2>
+            <span class="text-xs text-slate-500">{{ verified_total }} total</span>
+        </header>
+        {% if verified %}
+            <div class="overflow-x-auto max-h-[40rem] overflow-y-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50 text-slate-600 text-left sticky top-0 z-10">
+                        <tr>
+                            <th class="px-5 py-2">Student</th>
+                            <th class="px-5 py-2">Level</th>
+                            <th class="px-5 py-2">Year</th>
+                            <th class="px-5 py-2">Registration</th>
+                            <th class="px-5 py-2">Verified on</th>
+                            <th class="px-5 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100"
+                           data-paginate data-page-size="15"
+                           data-pagination-into="#scholars-pagination">
+                        {% for v in verified %}
+                            <tr data-page-item>
+                                <td class="px-5 py-2">{{ v.student.full_name if v.student else '—' }}</td>
+                                <td class="px-5 py-2 text-slate-600">{{ v.level_label }}</td>
+                                <td class="px-5 py-2 text-slate-600">{{ v.year_label }}</td>
+                                <td class="px-5 py-2 text-slate-600 truncate">
+                                    {{ v.registration.title if v.registration else '—' }}
+                                </td>
+                                <td class="px-5 py-2 text-slate-500">{{ v.reviewed_at | ph_date if v.reviewed_at else '—' }}</td>
+                                <td class="px-5 py-2 text-right">
+                                    <a href="{{ url_for('admin.review', app_id=v.id) }}"
+                                       class="text-brand-600 hover:underline text-sm">View</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div id="scholars-pagination"></div>
+        {% else %}
+            <p class="px-5 py-8 text-slate-500 text-sm text-center">Wala pang verified na scholar.</p>
+        {% endif %}
+    </div>
+</section>
+
+{# ===================== Pay-out joiners tab ===================== #}
+<section data-tab-panel id="tab-payouts" class="space-y-5 hidden">
+
+    <div class="grid sm:grid-cols-3 gap-4">
+        {{ stat_card('Total joins', total_joins, 'fa-handshake', 'blue') }}
+        {{ stat_card('Pay-out announcements', payouts | length, 'fa-bullhorn', 'brand') }}
+        {{ stat_card('Open right now',
+                     payouts | selectattr('status', 'equalto', 'open') | list | length,
+                     'fa-circle-play', 'green') }}
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <header class="px-5 py-3 border-b flex items-center justify-between">
+            <h2 class="font-semibold">Pay-outs</h2>
+            <span class="text-xs text-slate-500">{{ payouts | length }} total</span>
+        </header>
+        {% if payouts %}
+            <ul class="divide-y divide-slate-100">
+                {% for p in payouts %}
+                    <li class="px-5 py-4 flex items-start justify-between gap-3 flex-wrap">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap mb-1">
+                                <span class="text-xs uppercase tracking-wide px-2 py-0.5 rounded {{ status_styles.get(p.status, 'bg-slate-100 text-slate-700') }}">
+                                    {{ p.status }}
+                                </span>
+                                <p class="font-semibold truncate">{{ p.title }}</p>
+                            </div>
+                            {% if p.start_at and p.end_at %}
+                                <p class="text-xs text-slate-500">
+                                    <i class="fa-regular fa-calendar mr-1"></i>
+                                    {{ p.start_at | ph }} → {{ p.end_at | ph }}
+                                </p>
+                            {% endif %}
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="text-right">
+                                <p class="text-2xl font-bold leading-tight">{{ p.join_count }}</p>
+                                <p class="text-[11px] uppercase tracking-wide text-slate-400">joiners</p>
+                            </div>
+                            <a href="{{ url_for('admin.announcement_joiners', anc_id=p.id) }}"
+                               class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-brand-50 text-brand-700 hover:bg-brand-100 text-sm font-medium">
+                                <i class="fa-solid fa-users"></i>
+                                View list
+                            </a>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="px-5 py-8 text-slate-500 text-sm text-center">Wala pang pay-out na announcement.</p>
+        {% endif %}
+    </div>
+</section>
+
+<script>
+(function () {
+    const buttons = document.querySelectorAll('[data-tab-btn]');
+    const panels  = document.querySelectorAll('[data-tab-panel]');
+    if (!buttons.length || !panels.length) return;
+
+    const ACTIVE = ['text-brand-700', 'border-brand-500'];
+    const IDLE   = ['text-slate-500', 'hover:text-slate-700', 'border-transparent'];
+
+    function activate(target) {
+        buttons.forEach(b => {
+            const on = b.dataset.target === target;
+            ACTIVE.forEach(c => b.classList.toggle(c, on));
+            IDLE.forEach(c   => b.classList.toggle(c, !on));
+        });
+        panels.forEach(p => p.classList.toggle('hidden', p.id !== target));
+    }
+    buttons.forEach(b =>
+        b.addEventListener('click', () => activate(b.dataset.target)));
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,197 @@
+{% extends "admin/_layout.html" %}
+{% block title %}{{ student.full_name or 'Student' }} · Admin{% endblock %}
+
+{% set status_styles = {
+    'pending':  'bg-amber-100 text-amber-800',
+    'verified': 'bg-green-100 text-green-800',
+    'rejected': 'bg-red-100 text-red-800',
+} %}
+
+{% block admin_content %}
+<a href="{{ url_for('admin.users') }}" class="text-sm text-brand-600 hover:underline">&larr; All students</a>
+
+<div class="grid lg:grid-cols-3 gap-6 mt-2">
+
+    {# ----- Left: profile + actions ----- #}
+    <section class="lg:col-span-2 space-y-6">
+
+        {# Header card #}
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+            <div class="flex items-start gap-4 flex-wrap">
+                <div class="w-14 h-14 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xl font-bold">
+                    {{ (student.first_name or student.full_name or '?')[:1] | upper }}{{ (student.last_name or '')[:1] | upper }}
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h1 class="text-2xl font-bold truncate">{{ student.full_name or 'Student' }}</h1>
+                        {% if student.is_active %}
+                            <span class="text-xs uppercase px-2 py-1 rounded bg-green-100 text-green-800">Active</span>
+                        {% else %}
+                            <span class="text-xs uppercase px-2 py-1 rounded bg-red-100 text-red-800">Deactivated</span>
+                        {% endif %}
+                        {% if not student.email_verified %}
+                            <span class="text-xs uppercase px-2 py-1 rounded bg-amber-100 text-amber-800">Email unverified</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-sm text-slate-500 capitalize">{{ student.role or 'student' }}</p>
+                    <p class="text-xs text-slate-400 mt-1">Joined {{ student.created_at | ph_date }}</p>
+                </div>
+            </div>
+        </div>
+
+        {# Personal info #}
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+            <header class="mb-4">
+                <h2 class="font-semibold text-lg">Personal information</h2>
+            </header>
+            <div class="grid sm:grid-cols-2 gap-4 text-sm">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">First name</label>
+                    <input type="text" value="{{ student.first_name or '—' }}" readonly
+                           class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Middle name</label>
+                    <input type="text" value="{{ student.middle_name or '—' }}" readonly
+                           class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Last name</label>
+                    <input type="text" value="{{ student.last_name or '—' }}" readonly
+                           class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Suffix</label>
+                    <input type="text" value="{{ student.suffix or '—' }}" readonly
+                           class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+                </div>
+            </div>
+        </div>
+
+        {# Contact #}
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+            <header class="mb-4">
+                <h2 class="font-semibold text-lg">Contact</h2>
+            </header>
+            <div class="grid sm:grid-cols-2 gap-4 text-sm">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Email</label>
+                    <input type="text" value="{{ student.email or '—' }}" readonly
+                           class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Facebook</label>
+                    {% if student.facebook_url %}
+                        <a href="{{ student.facebook_url }}" target="_blank" rel="noopener"
+                           class="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-brand-700 hover:underline w-full truncate">
+                            <i class="fa-brands fa-facebook"></i>
+                            <span class="truncate">{{ student.facebook_url }}</span>
+                        </a>
+                    {% else %}
+                        <input type="text" value="—" readonly
+                               class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# Application history #}
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+            <header class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+                <h2 class="font-semibold text-lg">Applications ({{ applications | length }})</h2>
+            </header>
+
+            {% if applications %}
+                <ul class="divide-y divide-slate-100">
+                    {% for a in applications %}
+                        <li class="py-3">
+                            <a href="{{ url_for('admin.review', app_id=a.id) }}"
+                               class="flex items-start gap-3 hover:bg-slate-50 -mx-2 px-2 py-1 rounded-md">
+                                <span class="w-9 h-9 rounded-md bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-file-lines"></i>
+                                </span>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-medium text-sm truncate">
+                                        {{ a.registration.title if a.registration else 'Application' }}
+                                    </p>
+                                    <p class="text-xs text-slate-500">
+                                        {{ a.level_label }} · {{ a.year_label }}
+                                        <span class="text-slate-300">·</span>
+                                        {{ a.created_at | ph_date }}
+                                    </p>
+                                </div>
+                                <span class="text-xs uppercase tracking-wide px-2 py-1 rounded shrink-0 {{ status_styles.get(a.status, 'bg-slate-100 text-slate-700') }}">
+                                    {{ a.status }}
+                                </span>
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-sm text-slate-500">Wala pang application.</p>
+            {% endif %}
+        </div>
+
+        {# Pay-out joins #}
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+            <header class="mb-4">
+                <h2 class="font-semibold text-lg">Pay-out joiners ({{ payout_joins | length }})</h2>
+            </header>
+            {% if payout_joins %}
+                <ul class="divide-y divide-slate-100">
+                    {% for j in payout_joins %}
+                        <li class="py-2 flex items-center gap-3 text-sm">
+                            <span class="w-9 h-9 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-hand-holding-dollar"></i>
+                            </span>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium truncate">
+                                    {{ j.announcement.title if j.announcement else 'Pay-out' }}
+                                </p>
+                                <p class="text-xs text-slate-500">Joined {{ j.joined_at | ph }}</p>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-sm text-slate-500">Wala pang pay-out na sinalihan.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    {# ----- Right: action panel ----- #}
+    <aside class="space-y-4">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 lg:sticky lg:top-24">
+            <h2 class="font-semibold text-lg mb-2">Account actions</h2>
+            <p class="text-xs text-slate-500 mb-4">
+                Deactivating blocks login but keeps history. Deleting wipes everything — hindi na pwedeng ibalik.
+            </p>
+
+            <form method="post" action="{{ url_for('admin.user_set_status', student_id=student.id) }}" class="mb-3">
+                {% if student.is_active %}
+                    <input type="hidden" name="action" value="deactivate" />
+                    <button type="submit"
+                            onclick="return confirm('Deactivate this account? Hindi na sila pwedeng mag-login hangga\'t hindi mo i-activate ulit.');"
+                            class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium">
+                        <i class="fa-solid fa-user-slash"></i> Deactivate account
+                    </button>
+                {% else %}
+                    <input type="hidden" name="action" value="activate" />
+                    <button type="submit"
+                            class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white text-sm font-medium">
+                        <i class="fa-solid fa-user-check"></i> Activate account
+                    </button>
+                {% endif %}
+            </form>
+
+            <form method="post" action="{{ url_for('admin.user_delete', student_id=student.id) }}"
+                  onsubmit="return confirm('Permanently delete {{ (student.full_name or 'this student') | e }}? Mawawala lahat ng applications at uploaded files. Hindi na pwedeng ibalik.');">
+                <button type="submit"
+                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm font-medium">
+                    <i class="fa-solid fa-trash"></i> Delete account
+                </button>
+            </form>
+        </div>
+    </aside>
+</div>
+{% endblock %}

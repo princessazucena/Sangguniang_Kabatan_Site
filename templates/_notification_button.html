@@ -1,12 +1,21 @@
-{# Fixed notification button shown on student/admin pages.
-   The dropdown panel is a placeholder; wire actual notifications later. #}
-<div class="fixed top-4 right-4 z-50">
+{# Fixed notification bell shown on student/admin pages.
+   The dropdown panel sits directly below the button and reads from
+   the `notifications` context processor (services.notifications). #}
+
+{% set tone_styles = {
+    'brand': 'bg-brand-50 text-brand-700',
+    'blue':  'bg-blue-50 text-blue-700',
+    'green': 'bg-green-50 text-green-700',
+    'red':   'bg-red-50 text-red-700',
+    'slate': 'bg-slate-100 text-slate-700',
+} %}
+
+<div class="fixed top-3 right-3 sm:top-4 sm:right-4 z-50">
     <div class="relative" id="notif-root">
         <button type="button" id="notif-button"
-                class="relative inline-flex items-center justify-center w-11 h-11 rounded-full bg-white shadow-lg border border-slate-200 text-slate-700 hover:text-brand-700 hover:bg-brand-50"
+                class="relative inline-flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white shadow-lg border border-slate-200 text-slate-700 hover:text-brand-700 hover:bg-brand-50"
                 aria-haspopup="true" aria-expanded="false" aria-label="Notifications">
             <i class="fa-solid fa-bell"></i>
-            {# Unread badge — toggle the `hidden` class when there are no notifications. #}
             <span id="notif-badge"
                   class="hidden absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
                 0
@@ -14,15 +23,62 @@
         </button>
 
         <div id="notif-panel"
-             class="hidden absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden">
+             class="hidden absolute right-0 mt-2 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden">
             <div class="px-4 py-3 border-b flex items-center justify-between">
                 <span class="font-semibold text-sm">Notifications</span>
-                <button type="button" id="notif-close" class="text-slate-400 hover:text-slate-600" aria-label="Close">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <div class="flex items-center gap-3">
+                    <button type="button" id="notif-mark-read"
+                            class="text-xs text-brand-600 hover:underline"
+                            title="Mark all as read">
+                        Mark all read
+                    </button>
+                    <button type="button" id="notif-close"
+                            class="text-slate-400 hover:text-slate-600"
+                            aria-label="Close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
             </div>
-            <div class="max-h-80 overflow-y-auto divide-y divide-slate-100" id="notif-list">
-                <p class="px-4 py-6 text-sm text-slate-500 text-center">You're all caught up.</p>
+
+            <div class="max-h-96 overflow-y-auto divide-y divide-slate-100"
+                 id="notif-list" data-notif-list>
+                {% if notifications %}
+                    {% for n in notifications %}
+                        {% set href_url = url_for(n.endpoint) %}
+                        {% if n.anchor %}{% set href_url = href_url ~ '#' ~ n.anchor %}{% endif %}
+                        <a href="{{ href_url }}"
+                           class="block px-4 py-3 hover:bg-slate-50 transition"
+                           data-notif-item data-notif-id="{{ n.id }}">
+                            <div class="flex items-start gap-3">
+                                <span class="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm
+                                            {{ tone_styles.get(n.tone, 'bg-slate-100 text-slate-700') }}">
+                                    <i class="fa-solid {{ n.icon }}"></i>
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <p class="text-sm font-semibold text-slate-800 truncate">
+                                            {{ n.title }}
+                                        </p>
+                                        {% if n.created_at %}
+                                            <time class="text-[11px] text-slate-400 whitespace-nowrap">
+                                                {{ n.created_at | ph_date }}
+                                            </time>
+                                        {% endif %}
+                                    </div>
+                                    {% if n.body %}
+                                        <p class="text-xs text-slate-600 mt-0.5 line-clamp-2">
+                                            {{ n.body }}
+                                        </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </a>
+                    {% endfor %}
+                {% else %}
+                    <p class="px-4 py-6 text-sm text-slate-500 text-center">
+                        You're all caught up.
+                    </p>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -30,12 +86,73 @@
 
 <script>
 (function () {
-    const root   = document.getElementById('notif-root');
-    const btn    = document.getElementById('notif-button');
-    const panel  = document.getElementById('notif-panel');
-    const closeB = document.getElementById('notif-close');
+    const root    = document.getElementById('notif-root');
+    const btn     = document.getElementById('notif-button');
+    const panel   = document.getElementById('notif-panel');
+    const closeB  = document.getElementById('notif-close');
+    const badge   = document.getElementById('notif-badge');
+    const list    = document.getElementById('notif-list');
+    const markBtn = document.getElementById('notif-mark-read');
     if (!root || !btn || !panel) return;
 
+    // ----- Read state stored locally per browser -----
+    const STORAGE_KEY = 'sk-notif-read-v1';
+    function readSet() {
+        try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); }
+        catch (_) { return new Set(); }
+    }
+    function writeSet(set) {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(set))); }
+        catch (_) {}
+    }
+
+    function currentIds() {
+        return Array.from(list ? list.querySelectorAll('[data-notif-id]') : [])
+                    .map(el => el.dataset.notifId);
+    }
+
+    function refreshBadge() {
+        if (!badge) return;
+        const ids   = currentIds();
+        const seen  = readSet();
+        const unread = ids.filter(id => !seen.has(id)).length;
+        if (unread > 0) {
+            badge.textContent = unread > 9 ? '9+' : String(unread);
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+
+    function markAllRead() {
+        const set = readSet();
+        currentIds().forEach(id => set.add(id));
+        writeSet(set);
+        refreshBadge();
+    }
+
+    // Mark items as read when the user clicks one (before the redirect).
+    if (list) {
+        list.addEventListener('click', function (e) {
+            const item = e.target.closest('[data-notif-item]');
+            if (!item) return;
+            const id = item.dataset.notifId;
+            if (!id) return;
+            const set = readSet();
+            set.add(id);
+            writeSet(set);
+            // No need to refresh the badge — we're navigating away anyway.
+        });
+    }
+
+    if (markBtn) {
+        markBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            markAllRead();
+        });
+    }
+
+    // ----- Open / close the panel -----
     function open() {
         panel.classList.remove('hidden');
         btn.setAttribute('aria-expanded', 'true');
@@ -56,5 +173,7 @@
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') close();
     });
+
+    refreshBadge();
 })();
 </script>

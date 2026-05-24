@@ -1,5 +1,5 @@
 {% extends "student/_layout.html" %}
-{% block title %}My Application · Sangguniang Kabataan ng Bukal Scholarship Portal{% endblock %}
+{% block title %}My Applications · Sangguniang Kabataan ng Bukal Scholarship Portal{% endblock %}
 
 {% set status_styles = {
     'pending':  'bg-amber-100 text-amber-800',
@@ -8,118 +8,110 @@
 } %}
 
 {% block student_content %}
-{% if not open_registration %}
-    <div class="mb-4 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-sm flex items-start gap-3">
-        <i class="fa-solid fa-lock mt-0.5"></i>
-        <div>
-            <p class="font-semibold">Sarado pa o tapos na ang scholarship registration.</p>
-            <p>Hindi ka pa pwedeng mag-submit ng requirements. Tingnan ang
-                <a href="{{ url_for('student.announcements') }}" class="underline">announcements</a>
-                para sa susunod na registration window.</p>
-        </div>
-    </div>
-{% endif %}
+<div class="space-y-3 sm:space-y-5">
 
-<form method="post" action="{{ url_for('student.submit_requirements') }}"
-      enctype="multipart/form-data" class="grid md:grid-cols-3 gap-6">
-
-    <section class="md:col-span-2 space-y-4">
-        <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-100">
-            <div class="flex items-start justify-between gap-3 mb-3 flex-wrap">
-                <div>
-                    <h1 class="text-2xl font-bold">My application</h1>
-                    <p class="text-sm text-slate-500 mt-1">
-                        {{ level_label }} · {{ year_label }}
+    {# ---------- Open registration banner ---------- #}
+    {% if open_registration %}
+        <div class="rounded-xl border border-brand-200 bg-brand-50 p-3 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 shadow-sm">
+            <span class="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-brand-500 text-white flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-bullhorn"></i>
+            </span>
+            <div class="flex-1 min-w-0">
+                <p class="text-[11px] sm:text-xs uppercase tracking-wide text-brand-700 font-semibold">
+                    Bukas na ang registration
+                </p>
+                <p class="font-semibold text-brand-800 truncate text-sm sm:text-base">{{ open_registration.title }}</p>
+                {% if open_registration.start_at and open_registration.end_at %}
+                    <p class="text-[11px] sm:text-xs text-brand-700/80 mt-0.5">
+                        <i class="fa-regular fa-calendar mr-1"></i>
+                        {{ open_registration.start_at | ph }} → {{ open_registration.end_at | ph }}
                     </p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-xs uppercase tracking-wide px-2 py-1 rounded {{ status_styles.get(application.status, 'bg-slate-100 text-slate-700') }}">
-                        {{ application.status }}
-                    </span>
-                </div>
+                {% endif %}
             </div>
-
-            {% if application.notes %}
-                <div class="p-3 rounded-md bg-slate-50 border border-slate-200 text-sm">
-                    <p class="font-medium text-slate-700 mb-1">Reviewer notes</p>
-                    <p class="text-slate-600 whitespace-pre-line">{{ application.notes }}</p>
-                </div>
+            {% if open_application %}
+                <a href="{{ url_for('student.application', app_id=open_application.id) }}"
+                   class="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold whitespace-nowrap">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    Continue
+                </a>
+            {% else %}
+                <form method="post" action="{{ url_for('student.apply') }}">
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold whitespace-nowrap">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        Apply now
+                    </button>
+                </form>
             {% endif %}
         </div>
+    {% else %}
+        <div class="rounded-xl border border-slate-200 bg-white p-3 sm:p-5 flex items-start gap-2 sm:gap-3 shadow-sm">
+            <span class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-lock"></i>
+            </span>
+            <div class="text-xs sm:text-sm text-slate-600">
+                <p class="font-semibold text-slate-800 text-sm sm:text-base">Sarado pa o tapos na ang scholarship registration.</p>
+                <p>Tingnan ang
+                    <a href="{{ url_for('student.announcements') }}" class="text-brand-700 underline">announcements</a>
+                    para sa susunod na registration window.</p>
+            </div>
+        </div>
+    {% endif %}
 
-        <h2 class="text-lg font-semibold">Required documents</h2>
+    {# ---------- Application list ---------- #}
+    <section class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <header class="px-3 sm:px-5 py-2 sm:py-3 border-b flex items-center justify-between">
+            <h1 class="font-semibold text-sm sm:text-base">My applications</h1>
+            <span class="text-[11px] sm:text-xs text-slate-500">{{ applications | length }} total</span>
+        </header>
 
-        <div class="space-y-3">
-            {% for s in slots %}
-                {% set is_image = s.kind == 'image' %}
-                {% set accept = 'image/*' if is_image else 'application/pdf' %}
-                <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
-                    <div class="flex items-start justify-between gap-3 flex-wrap">
-                        <div class="flex items-start gap-3 min-w-0">
-                            <span class="w-9 h-9 rounded-md bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
-                                <i class="fa-solid {{ 'fa-id-card' if is_image else 'fa-file-pdf' }}"></i>
+        {% if applications %}
+            <ul class="divide-y divide-slate-100">
+                {% for a in applications %}
+                    {% set reg = a.registration %}
+                    <li>
+                        <a href="{{ url_for('student.application', app_id=a.id) }}"
+                           class="flex items-start gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-4 hover:bg-slate-50 transition">
+                            <span class="w-9 h-9 sm:w-10 sm:h-10 rounded-md bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-file-lines"></i>
                             </span>
-                            <div class="min-w-0">
-                                <p class="font-medium">{{ s.label }}</p>
-                                <p class="text-xs text-slate-500">
-                                    {% if is_image %}
-                                        Kunan ng litrato gamit ang camera, o mag-upload ng image (JPG/PNG).
-                                    {% else %}
-                                        PDF file lamang. Max 10 MB.
-                                    {% endif %}
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                    <p class="font-semibold text-slate-800 truncate text-sm">
+                                        {{ reg.title if reg else 'Application' }}
+                                    </p>
+                                    <span class="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded {{ status_styles.get(a.status, 'bg-slate-100 text-slate-700') }}">
+                                        {{ a.status }}
+                                    </span>
+                                </div>
+                                <p class="text-[11px] sm:text-xs text-slate-500 mt-0.5">
+                                    {{ a.level_label }} · {{ a.year_label }}
+                                    <span class="text-slate-300">·</span>
+                                    {{ a.created_at | ph_date }}
                                 </p>
-                                {% if s.file %}
-                                    <p class="text-xs text-slate-600 mt-1 truncate">
-                                        <i class="fa-solid fa-circle-check text-green-600 mr-1"></i>
-                                        {{ s.file.file_name }}
-                                        <span class="text-slate-400">· {{ (s.file.size_bytes or 0) // 1024 }} KB</span>
+                                {% if a.notes %}
+                                    <p class="text-[11px] sm:text-xs text-slate-600 mt-1 line-clamp-2">
+                                        <i class="fa-regular fa-comment mr-1 text-slate-400"></i>
+                                        {{ a.notes }}
                                     </p>
                                 {% endif %}
                             </div>
-                        </div>
-                        <span class="text-xs px-2 py-1 rounded
-                                     {% if s.file %}bg-green-100 text-green-800{% else %}bg-slate-100 text-slate-600{% endif %}">
-                            {% if s.file %}Uploaded{% else %}Missing{% endif %}
-                        </span>
-                    </div>
-
-                    <div class="mt-3">
-                        <input type="file"
-                               name="document_{{ s.key }}"
-                               accept="{{ accept }}"
-                               {% if is_image %}capture="environment"{% endif %}
-                               {% if not open_registration %}disabled{% endif %}
-                               class="block text-sm w-full file:mr-3 file:px-3 file:py-1.5 file:rounded-md
-                                      file:border-0 file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100
-                                      disabled:opacity-60 disabled:cursor-not-allowed" />
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-
-        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <p class="text-sm text-slate-600">
-                Pindutin ang <span class="font-medium">Submit</span> upang i-save ang lahat ng napiling files nang sabay-sabay.
-                Ang mga walang napiling file ay hindi mababago.
-            </p>
-            <button type="submit"
-                    {% if not open_registration %}disabled{% endif %}
-                    class="px-5 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold whitespace-nowrap
-                           disabled:bg-slate-300 disabled:cursor-not-allowed">
-                <i class="fa-solid fa-paper-plane mr-1"></i>
-                Submit requirements
-            </button>
-        </div>
+                            <i class="fa-solid fa-chevron-right text-slate-300 mt-1 text-xs"></i>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="px-4 py-8 text-center text-xs sm:text-sm text-slate-500">
+                <i class="fa-regular fa-folder-open text-2xl sm:text-3xl text-slate-300 mb-2 block"></i>
+                Wala ka pang application.
+                {% if open_registration %}
+                    Pindutin ang <span class="font-semibold">Apply now</span> sa itaas para magsimula.
+                {% else %}
+                    Maghintay ng susunod na registration window.
+                {% endif %}
+            </div>
+        {% endif %}
     </section>
-
-    <aside class="bg-white rounded-xl shadow-sm p-6 border border-slate-100 h-fit">
-        <h2 class="font-semibold mb-2">What happens next?</h2>
-        <ol class="list-decimal list-inside text-sm text-slate-600 space-y-1">
-            <li>Pumili ng files para sa bawat requirement.</li>
-            <li>Pindutin ang Submit upang i-save lahat sabay-sabay.</li>
-            <li>Susuriin ng admin ang iyong submission.</li>
-            <li>Magbabago ang status sa <em>verified</em> o <em>rejected</em>.</li>
-        </ol>
-    </aside>
-</form>
+</div>
 {% endblock %}

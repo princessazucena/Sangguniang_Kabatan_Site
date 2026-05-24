@@ -13,6 +13,8 @@ from dotenv import load_dotenv
 from routes.public import public_bp
 from routes.student import student_bp
 from routes.admin import admin_bp
+from services.notifications import build_feed
+from supabase_client import get_supabase
 
 
 # Philippine time has no DST adjustments; offset is fixed at +08:00.
@@ -60,6 +62,22 @@ def create_app() -> Flask:
     app.register_blueprint(public_bp)
     app.register_blueprint(student_bp, url_prefix="/student")
     app.register_blueprint(admin_bp, url_prefix="/admin")
+
+    @app.context_processor
+    def inject_notifications():
+        """Make a notification feed available to every signed-in template."""
+        role = session.get("role")
+        if role not in ("student", "admin"):
+            return {"notifications": []}
+        try:
+            feed = build_feed(
+                get_supabase(),
+                role=role,
+                user_id=session.get("user_id"),
+            )
+        except Exception:
+            feed = []
+        return {"notifications": feed}
 
     @app.route("/")
     def index():

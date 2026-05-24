@@ -34,7 +34,7 @@
              data-paginate data-page-size="15"
              data-pagination-into="#announcements-pagination">
             {% for a in announcements %}
-                <article data-page-item class="bg-white rounded-lg shadow-sm p-4 border border-slate-100">
+                <article id="anc-{{ a.id }}" data-page-item class="bg-white rounded-lg shadow-sm p-4 border border-slate-100 scroll-mt-24">
                     <div class="flex items-start justify-between gap-3 flex-wrap">
                         <div class="min-w-0">
                             <div class="flex items-center gap-2 flex-wrap mb-1">

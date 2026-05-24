@@ -1,41 +1,28 @@
 {% extends "base.html" %}
 
-{# Mobile-first sidebar layout for student pages.
-   Pages should override `student_content` instead of `content`. #}
+{# Layout for student pages.
+   Pages should override `student_content` instead of `content`.
+   Desktop: persistent left sidebar.
+   Mobile : a hamburger button that opens a centered modal menu —
+            no off-canvas drawer wasting horizontal space. #}
 
 {% block content %}
-<div class="md:grid md:grid-cols-[16rem_1fr] md:gap-6">
+<div class="md:grid md:grid-cols-[15rem_1fr] md:gap-6">
 
     {# ----- Mobile top bar (visible below md) ----- #}
-    <div class="md:hidden flex items-center justify-between mb-4">
-        <button type="button" id="student-sidebar-toggle"
-                class="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-white border border-slate-200 text-slate-700"
-                aria-controls="student-sidebar" aria-expanded="false">
+    <div class="md:hidden flex items-center justify-between mb-3">
+        <button type="button" data-student-menu-open
+                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-white border border-slate-200 text-slate-700 text-sm">
             <i class="fa-solid fa-bars"></i>
-            <span class="text-sm font-medium">Menu</span>
+            <span class="font-medium">Menu</span>
         </button>
-        <span class="text-sm text-slate-500">{{ session.get('full_name') }}</span>
+        <span class="text-xs text-slate-500 truncate max-w-[55%]">{{ session.get('full_name') }}</span>
     </div>
 
-    {# ----- Sidebar (off-canvas on mobile, persistent on md+) ----- #}
-    <div id="student-sidebar-backdrop"
-         class="hidden fixed inset-0 bg-slate-900/40 z-30 md:hidden"></div>
-
-    <aside id="student-sidebar"
-           class="fixed md:static inset-y-0 left-0 z-40 w-64 md:w-auto
-                  bg-white md:bg-transparent shadow-xl md:shadow-none
-                  p-4 md:p-0 overflow-y-auto
-                  transform -translate-x-full md:translate-x-0
-                  transition-transform duration-200 ease-out">
-        <div class="md:bg-white md:rounded-xl md:shadow-sm md:border md:border-slate-100 md:p-4 md:sticky md:top-24 md:max-h-[calc(100vh-7rem)] md:overflow-y-auto">
-            <div class="flex items-center justify-between mb-4 md:mb-3">
-                <span class="text-xs uppercase tracking-wide text-slate-500">Student menu</span>
-                <button type="button" id="student-sidebar-close"
-                        class="md:hidden text-slate-500 hover:text-slate-700"
-                        aria-label="Close menu">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
+    {# ----- Desktop sidebar (md+) ----- #}
+    <aside class="hidden md:block">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-3 sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto">
+            <span class="block text-xs uppercase tracking-wide text-slate-500 mb-2 px-1">Student menu</span>
 
             {% set nav_base = "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium" %}
             {% set nav_active = "bg-brand-50 text-brand-700" %}
@@ -45,15 +32,15 @@
                 <a href="{{ url_for('student.dashboard') }}"
                    class="{{ nav_base }} {% if request.endpoint == 'student.dashboard' %}{{ nav_active }}{% else %}{{ nav_idle }}{% endif %}">
                     <i class="fa-solid fa-file-lines w-5 text-center"></i>
-                    <span>My application</span>
+                    <span>My applications</span>
                 </a>
                 <a href="{{ url_for('student.profile') }}"
                    class="{{ nav_base }} {% if request.endpoint == 'student.profile' %}{{ nav_active }}{% else %}{{ nav_idle }}{% endif %}">
                     <i class="fa-solid fa-user w-5 text-center"></i>
                     <span>My profile</span>
                 </a>
-                <a href="{{ url_for('public.home') }}"
-                   class="{{ nav_base }} {% if request.endpoint == 'public.home' %}{{ nav_active }}{% else %}{{ nav_idle }}{% endif %}">
+                <a href="{{ url_for('student.announcements') }}"
+                   class="{{ nav_base }} {% if request.endpoint == 'student.announcements' %}{{ nav_active }}{% else %}{{ nav_idle }}{% endif %}">
                     <i class="fa-solid fa-bullhorn w-5 text-center"></i>
                     <span>Announcements</span>
                 </a>
@@ -72,31 +59,65 @@
     </div>
 </div>
 
+{# ----- Mobile menu modal (centered) ----- #}
+<div id="student-menu-modal"
+     class="hidden fixed inset-0 z-[60] flex items-end sm:items-center justify-center md:hidden"
+     role="dialog" aria-modal="true" aria-labelledby="student-menu-title">
+    <div class="absolute inset-0 bg-slate-900/50" data-student-menu-close></div>
+    <div class="relative bg-white w-full sm:max-w-sm sm:mx-4 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-3 border-b">
+            <span id="student-menu-title" class="text-xs uppercase tracking-wide text-slate-500">Student menu</span>
+            <button type="button" data-student-menu-close
+                    class="text-slate-400 hover:text-slate-600 p-1" aria-label="Close menu">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        {% set m_base = "flex items-center gap-3 px-4 py-3 text-sm" %}
+        {% set m_active = "bg-brand-50 text-brand-700 font-semibold" %}
+        {% set m_idle = "text-slate-700 hover:bg-slate-50" %}
+
+        <nav class="divide-y divide-slate-100">
+            <a href="{{ url_for('student.dashboard') }}"
+               class="{{ m_base }} {% if request.endpoint == 'student.dashboard' %}{{ m_active }}{% else %}{{ m_idle }}{% endif %}">
+                <i class="fa-solid fa-file-lines w-5 text-center"></i>
+                <span>My applications</span>
+            </a>
+            <a href="{{ url_for('student.profile') }}"
+               class="{{ m_base }} {% if request.endpoint == 'student.profile' %}{{ m_active }}{% else %}{{ m_idle }}{% endif %}">
+                <i class="fa-solid fa-user w-5 text-center"></i>
+                <span>My profile</span>
+            </a>
+            <a href="{{ url_for('student.announcements') }}"
+               class="{{ m_base }} {% if request.endpoint == 'student.announcements' %}{{ m_active }}{% else %}{{ m_idle }}{% endif %}">
+                <i class="fa-solid fa-bullhorn w-5 text-center"></i>
+                <span>Announcements</span>
+            </a>
+            <a href="{{ url_for('public.logout') }}"
+               class="{{ m_base }} text-red-600 hover:bg-red-50">
+                <i class="fa-solid fa-right-from-bracket w-5 text-center"></i>
+                <span>Log out</span>
+            </a>
+        </nav>
+    </div>
+</div>
+
 {# ----- Fixed notification button ----- #}
 {% include "_notification_button.html" %}
 
 <script>
 (function () {
-    const toggle   = document.getElementById('student-sidebar-toggle');
-    const closeBtn = document.getElementById('student-sidebar-close');
-    const sidebar  = document.getElementById('student-sidebar');
-    const backdrop = document.getElementById('student-sidebar-backdrop');
-    if (!toggle || !sidebar || !backdrop) return;
-
-    function open() {
-        sidebar.classList.remove('-translate-x-full');
-        backdrop.classList.remove('hidden');
-        toggle.setAttribute('aria-expanded', 'true');
-    }
-    function close() {
-        sidebar.classList.add('-translate-x-full');
-        backdrop.classList.add('hidden');
-        toggle.setAttribute('aria-expanded', 'false');
-    }
-
-    toggle.addEventListener('click', open);
-    closeBtn && closeBtn.addEventListener('click', close);
-    backdrop.addEventListener('click', close);
+    const modal = document.getElementById('student-menu-modal');
+    if (!modal) return;
+    function open()  { modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); }
+    function close() { modal.classList.add('hidden');    document.body.classList.remove('overflow-hidden'); }
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('[data-student-menu-open]'))  { e.preventDefault(); open();  return; }
+        if (e.target.closest('[data-student-menu-close]')) { close(); return; }
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) close();
+    });
 })();
 </script>
 {% endblock %}
