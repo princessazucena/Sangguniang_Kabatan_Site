@@ -14,10 +14,88 @@
 } %}
 
 {% block admin_content %}
-<div class="grid md:grid-cols-3 gap-6">
-    <section class="md:col-span-1 bg-white rounded-xl shadow-sm p-6 border border-slate-100 h-fit">
-        <h1 class="text-xl font-bold mb-3">Post announcement</h1>
-        <form method="post" class="space-y-3" id="announce-form">
+<div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+    <div>
+        <h1 class="text-2xl font-bold text-brand-700">Announcements</h1>
+        <p class="text-sm text-slate-500">
+            {{ announcements|length }} published
+        </p>
+    </div>
+    <button type="button" data-announce-open
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium">
+        <i class="fa-solid fa-plus"></i>
+        Create announcement
+    </button>
+</div>
+
+{% if announcements %}
+    <div class="space-y-3">
+        {% for a in announcements %}
+            <article class="bg-white rounded-lg shadow-sm p-4 border border-slate-100">
+                <div class="flex items-start justify-between gap-3 flex-wrap">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                            <span class="text-xs px-2 py-0.5 rounded {{ category_styles.get(a.category, 'bg-slate-100 text-slate-700') }}">
+                                {{ category_labels.get(a.category, 'General') }}
+                            </span>
+                            <span class="text-xs uppercase px-2 py-0.5 rounded {{ status_styles.get(a.status, 'bg-slate-100 text-slate-700') }}">
+                                {{ a.status }}
+                            </span>
+                        </div>
+                        <h3 class="font-semibold">{{ a.title }}</h3>
+                    </div>
+                    <time class="text-xs text-slate-500 whitespace-nowrap">{{ a.created_at[:10] }}</time>
+                </div>
+                {% if a.start_at and a.end_at %}
+                    <p class="text-xs text-slate-500 mt-1">
+                        <i class="fa-regular fa-calendar mr-1"></i>
+                        {{ a.start_at[:16] | replace('T', ' ') }} → {{ a.end_at[:16] | replace('T', ' ') }}
+                    </p>
+                {% endif %}
+                <p class="mt-2 text-sm text-slate-700 whitespace-pre-line">{{ a.body }}</p>
+
+                <div class="mt-3 flex items-center gap-3 flex-wrap">
+                    {% if a.category == 'payout' %}
+                        <a href="{{ url_for('admin.announcement_joiners', anc_id=a.id) }}"
+                           class="text-sm text-brand-600 hover:underline">
+                            <i class="fa-solid fa-users mr-1"></i>
+                            {{ a.join_count or 0 }} joined — view list
+                        </a>
+                    {% endif %}
+                    <form method="post"
+                          action="{{ url_for('admin.delete_announcement', anc_id=a.id) }}"
+                          onsubmit="return confirm('Delete this announcement?');"
+                          class="ml-auto">
+                        <button type="submit"
+                                class="text-xs text-red-600 hover:underline">
+                            <i class="fa-solid fa-trash mr-1"></i>Delete
+                        </button>
+                    </form>
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-10 text-center">
+        <i class="fa-solid fa-bullhorn text-4xl text-slate-300 mb-3"></i>
+        <p class="text-slate-500 text-sm">No announcements yet. Click <span class="font-medium text-brand-600">Create announcement</span> above to publish your first.</p>
+    </div>
+{% endif %}
+
+{# ===== Create announcement modal ===== #}
+<div id="announce-modal"
+     class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4"
+     role="dialog" aria-modal="true" aria-labelledby="announce-title">
+    <div class="absolute inset-0 bg-slate-900/60" data-announce-close></div>
+    <div class="relative bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-3 border-b">
+            <h2 id="announce-title" class="text-lg font-bold text-brand-700">Post announcement</h2>
+            <button type="button" data-announce-close
+                    class="text-slate-400 hover:text-slate-600" aria-label="Close">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        <form method="post" class="flex-1 overflow-y-auto px-5 py-4 space-y-3" id="announce-form">
             <div>
                 <label class="block text-sm font-medium mb-1">Category</label>
                 <select name="category" id="cat-select" required
@@ -34,7 +112,7 @@
             </div>
             <div>
                 <label class="block text-sm font-medium mb-1">Body</label>
-                <textarea name="body" rows="4" required
+                <textarea name="body" rows="5" required
                           class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"></textarea>
             </div>
 
@@ -55,84 +133,56 @@
                 </p>
             </div>
 
-            <button type="submit"
-                    class="w-full bg-brand-500 hover:bg-brand-600 text-white py-2 rounded-md text-sm font-medium">
-                Publish
-            </button>
-        </form>
-    </section>
-
-    <section class="md:col-span-2">
-        <h2 class="text-xl font-bold mb-3">Published announcements</h2>
-        {% if announcements %}
-            <div class="space-y-3">
-                {% for a in announcements %}
-                    <article class="bg-white rounded-lg shadow-sm p-4 border border-slate-100">
-                        <div class="flex items-start justify-between gap-3 flex-wrap">
-                            <div class="min-w-0">
-                                <div class="flex items-center gap-2 flex-wrap mb-1">
-                                    <span class="text-xs px-2 py-0.5 rounded {{ category_styles.get(a.category, 'bg-slate-100 text-slate-700') }}">
-                                        {{ category_labels.get(a.category, 'General') }}
-                                    </span>
-                                    <span class="text-xs uppercase px-2 py-0.5 rounded {{ status_styles.get(a.status, 'bg-slate-100 text-slate-700') }}">
-                                        {{ a.status }}
-                                    </span>
-                                </div>
-                                <h3 class="font-semibold">{{ a.title }}</h3>
-                            </div>
-                            <time class="text-xs text-slate-500 whitespace-nowrap">{{ a.created_at[:10] }}</time>
-                        </div>
-                        {% if a.start_at and a.end_at %}
-                            <p class="text-xs text-slate-500 mt-1">
-                                <i class="fa-regular fa-calendar mr-1"></i>
-                                {{ a.start_at[:16] | replace('T', ' ') }} → {{ a.end_at[:16] | replace('T', ' ') }}
-                            </p>
-                        {% endif %}
-                        <p class="mt-2 text-sm text-slate-700 whitespace-pre-line">{{ a.body }}</p>
-
-                        <div class="mt-3 flex items-center gap-3 flex-wrap">
-                            {% if a.category == 'payout' %}
-                                <a href="{{ url_for('admin.announcement_joiners', anc_id=a.id) }}"
-                                   class="text-sm text-brand-600 hover:underline">
-                                    <i class="fa-solid fa-users mr-1"></i>
-                                    {{ a.join_count or 0 }} joined — view list
-                                </a>
-                            {% endif %}
-                            <form method="post"
-                                  action="{{ url_for('admin.delete_announcement', anc_id=a.id) }}"
-                                  onsubmit="return confirm('Delete this announcement?');"
-                                  class="ml-auto">
-                                <button type="submit"
-                                        class="text-xs text-red-600 hover:underline">
-                                    <i class="fa-solid fa-trash mr-1"></i>Delete
-                                </button>
-                            </form>
-                        </div>
-                    </article>
-                {% endfor %}
+            <div class="pt-2 flex gap-2 justify-end">
+                <button type="button" data-announce-close
+                        class="px-4 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium">
+                    <i class="fa-solid fa-paper-plane mr-1"></i>
+                    Publish
+                </button>
             </div>
-        {% else %}
-            <p class="text-slate-500 text-sm">No announcements yet.</p>
-        {% endif %}
-    </section>
+        </form>
+    </div>
 </div>
 
 <script>
 (function () {
+    // ----- modal open/close -----
+    const modal = document.getElementById('announce-modal');
+    if (modal) {
+        function open()  { modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); }
+        function close() { modal.classList.add('hidden');    document.body.classList.remove('overflow-hidden'); }
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('[data-announce-open]'))  { e.preventDefault(); open();  return; }
+            if (e.target.closest('[data-announce-close]')) { close(); return; }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !modal.classList.contains('hidden')) close();
+        });
+
+        // Auto-open the modal if the form was submitted with errors and we
+        // came back to this page; otherwise stay closed.
+        {% if request.method == 'POST' %}open();{% endif %}
+    }
+
+    // ----- show/hide schedule fields based on category -----
     const cat   = document.getElementById('cat-select');
     const sched = document.getElementById('schedule-fields');
-    if (!cat || !sched) return;
-    const startInput = sched.querySelector('input[name="start_at"]');
-    const endInput   = sched.querySelector('input[name="end_at"]');
-
-    function refresh() {
-        const scheduled = cat.value === 'registration' || cat.value === 'payout';
-        sched.style.display = scheduled ? '' : 'none';
-        startInput.required = scheduled;
-        endInput.required   = scheduled;
+    if (cat && sched) {
+        const startInput = sched.querySelector('input[name="start_at"]');
+        const endInput   = sched.querySelector('input[name="end_at"]');
+        function refresh() {
+            const scheduled = cat.value === 'registration' || cat.value === 'payout';
+            sched.style.display = scheduled ? '' : 'none';
+            startInput.required = scheduled;
+            endInput.required   = scheduled;
+        }
+        cat.addEventListener('change', refresh);
+        refresh();
     }
-    cat.addEventListener('change', refresh);
-    refresh();
 })();
 </script>
 {% endblock %}
