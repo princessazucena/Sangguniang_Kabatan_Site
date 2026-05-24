@@ -49,11 +49,13 @@
 {% set category_labels = {
     'registration': 'Scholarship Registration',
     'payout':       'Scholarship Pay Out',
+    'kk_assembly':  'KK Assembly',
     'general':      'General',
 } %}
 {% set category_styles = {
     'registration': 'bg-brand-50 text-brand-700',
     'payout':       'bg-blue-50 text-blue-700',
+    'kk_assembly':  'bg-purple-50 text-purple-700',
     'general':      'bg-slate-100 text-slate-700',
 } %}
 
@@ -121,6 +123,25 @@
                             <button type="button" disabled
                                     class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-slate-200 text-slate-500 text-xs sm:text-sm font-medium cursor-not-allowed">
                                 <i class="fa-solid fa-lock"></i> Pay-out closed
+                            </button>
+                        {% endif %}
+                    </div>
+                {% elif a.category == 'kk_assembly' %}
+                    <div class="mt-3">
+                        {% if a.status == 'open' %}
+                            <a href="{{ url_for('public.login', next=url_for('student.announcements')) }}"
+                               class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-purple-600 hover:bg-purple-700 text-white text-xs sm:text-sm font-medium">
+                                <i class="fa-solid fa-people-group"></i> Log in to join
+                            </a>
+                        {% elif a.status == 'upcoming' %}
+                            <button type="button" disabled
+                                    class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-slate-200 text-slate-500 text-xs sm:text-sm font-medium cursor-not-allowed">
+                                <i class="fa-regular fa-clock"></i> Opens {{ a.start_at | ph_date }}
+                            </button>
+                        {% else %}
+                            <button type="button" disabled
+                                    class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-slate-200 text-slate-500 text-xs sm:text-sm font-medium cursor-not-allowed">
+                                <i class="fa-solid fa-lock"></i> Assembly closed
                             </button>
                         {% endif %}
                     </div>
