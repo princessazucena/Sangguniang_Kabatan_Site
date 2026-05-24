@@ -143,6 +143,7 @@ def home():
     res = (
         sb.table("announcements")
         .select("*")
+        .eq("notify_landing", True)
         .order("created_at", desc=True)
         .limit(20)
         .execute()

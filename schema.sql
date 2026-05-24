@@ -31,6 +31,9 @@ create table if not exists public.announcements (
     category text check (category in ('registration','payout','kk_assembly','general')),
     start_at timestamptz,
     end_at   timestamptz,
+    notify_landing boolean not null default true,
+    notify_inapp   boolean not null default true,
+    notify_email   boolean not null default true,
     posted_by uuid references public.profiles(id) on delete set null,
     created_at timestamptz not null default now()
 );

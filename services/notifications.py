@@ -46,6 +46,7 @@ def _announcement_items(sb, role: str) -> List[Dict[str, Any]]:
     rows = (
         sb.table("announcements")
         .select("*")
+        .eq("notify_inapp", True)
         .order("created_at", desc=True)
         .limit(50)
         .execute()

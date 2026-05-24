@@ -45,6 +45,9 @@ def announcements():
         category = (request.form.get("category") or "general").strip()
         start_at = parse_dt_local(request.form.get("start_at") or "")
         end_at   = parse_dt_local(request.form.get("end_at") or "")
+        notify_landing = bool(request.form.get("notify_landing"))
+        notify_inapp   = bool(request.form.get("notify_inapp"))
+        notify_email   = bool(request.form.get("notify_email"))
 
         if category not in CATEGORIES:
             flash("Invalid category.", "error")
@@ -60,33 +63,40 @@ def announcements():
                 flash("End date must be after the start date.", "error")
                 return redirect(url_for("admin.announcements"))
 
+        if not (notify_landing or notify_inapp or notify_email):
+            flash("Pumili ng kahit isang channel para sa announcement.", "error")
+            return redirect(url_for("admin.announcements"))
+
         sb.table("announcements").insert({
             "title":     title,
             "body":      body,
             "category":  category,
             "start_at":  start_at,
             "end_at":    end_at,
+            "notify_landing": notify_landing,
+            "notify_inapp":   notify_inapp,
+            "notify_email":   notify_email,
             "posted_by": session["user_id"],
         }).execute()
         flash("Announcement posted.", "success")
 
-        # Email every student in the background. We re-fetch the row so
-        # the broadcast uses the canonical, server-stored values
-        # (including the generated id and created_at).
-        try:
-            latest = (
-                sb.table("announcements")
-                .select("*")
-                .eq("title", title)
-                .order("created_at", desc=True)
-                .limit(1)
-                .execute()
-            ).data or []
-            if latest:
-                _broadcast_in_background(current_app._get_current_object(), latest[0])
-        except Exception:
-            # Don't fail the admin flow if we can't kick off the email.
-            current_app.logger.exception("Could not start announcement broadcast")
+        # Email every student in the background, but only when the email
+        # channel is enabled for this announcement.
+        if notify_email:
+            try:
+                latest = (
+                    sb.table("announcements")
+                    .select("*")
+                    .eq("title", title)
+                    .order("created_at", desc=True)
+                    .limit(1)
+                    .execute()
+                ).data or []
+                if latest:
+                    _broadcast_in_background(current_app._get_current_object(), latest[0])
+            except Exception:
+                # Don't fail the admin flow if we can't kick off the email.
+                current_app.logger.exception("Could not start announcement broadcast")
 
         return redirect(url_for("admin.announcements"))
 
