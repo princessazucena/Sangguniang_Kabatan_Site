@@ -1,0 +1,64 @@
+{% extends "admin/_layout.html" %}
+{% block title %}Applications · Admin{% endblock %}
+
+{% set status_styles = {
+    'pending':  'bg-amber-100 text-amber-800',
+    'verified': 'bg-green-100 text-green-800',
+    'rejected': 'bg-red-100 text-red-800',
+} %}
+
+{% block admin_content %}
+<div class="mb-5">
+    <h1 class="text-2xl font-bold text-brand-700">Applications</h1>
+    <p class="text-sm text-slate-500">All submitted scholarship applications.</p>
+</div>
+
+<div class="grid sm:grid-cols-3 gap-4 mb-6">
+    {% for key in ['pending', 'verified', 'rejected'] %}
+        <div class="bg-white rounded-xl shadow-sm p-4 border border-slate-100">
+            <div class="text-xs uppercase tracking-wide text-slate-500">{{ key }}</div>
+            <div class="text-3xl font-bold mt-1">{{ counts.get(key, 0) }}</div>
+        </div>
+    {% endfor %}
+</div>
+
+<section class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="px-5 py-3 border-b font-semibold">Applications</div>
+    {% if applications %}
+        <div class="overflow-x-auto max-h-[36rem] overflow-y-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-slate-600 text-left sticky top-0 z-10">
+                    <tr>
+                        <th class="px-5 py-2">Student</th>
+                        <th class="px-5 py-2">Submitted</th>
+                        <th class="px-5 py-2">Status</th>
+                        <th class="px-5 py-2"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100"
+                       data-paginate data-page-size="15"
+                       data-pagination-into="#applications-pagination">
+                    {% for a in applications %}
+                        <tr data-page-item>
+                            <td class="px-5 py-2">{{ a.student.full_name if a.student else '—' }}</td>
+                            <td class="px-5 py-2 text-slate-500">{{ a.created_at | ph_date }}</td>
+                            <td class="px-5 py-2">
+                                <span class="text-xs uppercase px-2 py-1 rounded {{ status_styles.get(a.status, 'bg-slate-100 text-slate-700') }}">
+                                    {{ a.status }}
+                                </span>
+                            </td>
+                            <td class="px-5 py-2 text-right">
+                                <a href="{{ url_for('admin.review', app_id=a.id) }}"
+                                   class="text-brand-600 hover:underline">Review</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div id="applications-pagination"></div>
+    {% else %}
+        <p class="px-5 py-6 text-slate-500 text-sm">No applications yet.</p>
+    {% endif %}
+</section>
+{% endblock %}

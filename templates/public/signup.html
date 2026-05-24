@@ -52,11 +52,110 @@
         </div>
     </div>
 
+    {# ---------- Address ----------
+       Each part is a separate input. The dropdowns use <datalist> so the
+       student can either pick from the suggestions or type a custom value. #}
+    <fieldset class="border border-slate-200 rounded-md p-3 pt-2">
+        <legend class="px-1 text-xs font-semibold text-slate-600 uppercase tracking-wide">Home address</legend>
+
+        <div class="grid sm:grid-cols-3 gap-3">
+            <div>
+                <label class="block font-medium mb-1">House / Lot / Block no.</label>
+                <input name="address_house_no" required
+                       placeholder="e.g. 123 / Lot 4 Blk 2"
+                       value="{{ form.address_house_no or '' }}"
+                       class="w-full rounded-md border border-slate-300 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400" />
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Street <span class="text-slate-400 font-normal">(optional)</span></label>
+                <input name="address_street"
+                       placeholder="e.g. Rizal St."
+                       value="{{ form.address_street or '' }}"
+                       class="w-full rounded-md border border-slate-300 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400" />
+            </div>
+            <div>
+                <label class="block font-medium mb-1">Purok / Sitio</label>
+                <input name="address_purok" required list="purok-options"
+                       placeholder="Pumili o magtype"
+                       value="{{ form.address_purok or '' }}"
+                       class="w-full rounded-md border border-slate-300 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                <datalist id="purok-options">
+                    <option value="Purok 1"></option>
+                    <option value="Purok 2"></option>
+                    <option value="Purok 3"></option>
+                    <option value="Purok 4"></option>
+                    <option value="Purok 5"></option>
+                    <option value="Purok 6"></option>
+                    <option value="Purok 7"></option>
+                </datalist>
+            </div>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-3 mt-3">
+            <div>
+                <label class="block font-medium mb-1">Barangay</label>
+                <input name="address_barangay" required list="barangay-options"
+                       placeholder="Pumili o magtype"
+                       value="{{ form.address_barangay or 'Bukal' }}"
+                       class="w-full rounded-md border border-slate-300 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                <datalist id="barangay-options">
+                    <option value="Bukal"></option>
+                </datalist>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">City / Municipality</label>
+                <input name="address_city" required list="city-options"
+                       placeholder="Pumili o magtype"
+                       value="{{ form.address_city or '' }}"
+                       class="w-full rounded-md border border-slate-300 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                <datalist id="city-options">
+                    <option value="Tayabas City"></option>
+                    <option value="Lucban"></option>
+                    <option value="Sariaya"></option>
+                    <option value="Lucena City"></option>
+                    <option value="Candelaria"></option>
+                    <option value="Tiaong"></option>
+                    <option value="Pagbilao"></option>
+                    <option value="Mauban"></option>
+                </datalist>
+            </div>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-3 mt-3">
+            <div>
+                <label class="block font-medium mb-1">Province</label>
+                <input name="address_province" required list="province-options"
+                       placeholder="Pumili o magtype"
+                       value="{{ form.address_province or 'Quezon' }}"
+                       class="w-full rounded-md border border-slate-300 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                <datalist id="province-options">
+                    <option value="Quezon"></option>
+                    <option value="Laguna"></option>
+                    <option value="Batangas"></option>
+                    <option value="Cavite"></option>
+                    <option value="Rizal"></option>
+                    <option value="Camarines Norte"></option>
+                    <option value="Camarines Sur"></option>
+                    <option value="Marinduque"></option>
+                </datalist>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">ZIP code <span class="text-slate-400 font-normal">(optional)</span></label>
+                <input name="address_zip" inputmode="numeric" pattern="\d{4}"
+                       placeholder="e.g. 4327"
+                       value="{{ form.address_zip or '' }}"
+                       class="w-full rounded-md border border-slate-300 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400" />
+            </div>
+        </div>
+    </fieldset>
+
     <div class="grid sm:grid-cols-2 gap-3">
         <div>
-            <label class="block font-medium mb-1">Password <span class="text-slate-400 font-normal">(min 6)</span></label>
+            <label class="block font-medium mb-1">Password</label>
             <div class="password-field relative">
-                <input name="password" type="password" minlength="6" required
+                <input id="signup-password" name="password" type="password" minlength="8" required
+                       pattern="(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}"
+                       title="At least 8 characters, with one number and one special character."
                        class="w-full rounded-md border border-slate-300 px-3 py-1.5 pr-10 focus:outline-none focus:ring-2 focus:ring-brand-400" />
                 <button type="button" data-password-toggle
                         class="absolute inset-y-0 right-0 px-3 flex items-center text-slate-500 hover:text-slate-700"
@@ -64,11 +163,25 @@
                     <i class="fa-regular fa-eye"></i>
                 </button>
             </div>
+            <ul id="pw-rules" class="mt-1.5 space-y-0.5 text-xs text-slate-500" aria-live="polite">
+                <li data-rule="length" class="flex items-center gap-1.5">
+                    <i class="fa-regular fa-circle text-slate-300"></i>
+                    <span>At least 8 characters</span>
+                </li>
+                <li data-rule="number" class="flex items-center gap-1.5">
+                    <i class="fa-regular fa-circle text-slate-300"></i>
+                    <span>Contains a number</span>
+                </li>
+                <li data-rule="special" class="flex items-center gap-1.5">
+                    <i class="fa-regular fa-circle text-slate-300"></i>
+                    <span>Contains a special character (e.g. ! @ # $ %)</span>
+                </li>
+            </ul>
         </div>
         <div>
             <label class="block font-medium mb-1">Confirm password</label>
             <div class="password-field relative">
-                <input name="password_confirm" type="password" minlength="6" required
+                <input id="signup-password-confirm" name="password_confirm" type="password" minlength="8" required
                        class="w-full rounded-md border border-slate-300 px-3 py-1.5 pr-10 focus:outline-none focus:ring-2 focus:ring-brand-400" />
                 <button type="button" data-password-toggle
                         class="absolute inset-y-0 right-0 px-3 flex items-center text-slate-500 hover:text-slate-700"
@@ -76,6 +189,7 @@
                     <i class="fa-regular fa-eye"></i>
                 </button>
             </div>
+            <p id="pw-match" class="mt-1.5 text-xs text-slate-500 hidden"></p>
         </div>
     </div>
 
@@ -89,4 +203,57 @@
     Already have an account?
     <a href="{{ url_for('public.login') }}" class="text-brand-600 hover:underline">Log in</a>
 </p>
+
+<script>
+(function () {
+    const pw      = document.getElementById('signup-password');
+    const confirm = document.getElementById('signup-password-confirm');
+    const rules   = document.getElementById('pw-rules');
+    const match   = document.getElementById('pw-match');
+    if (!pw || !rules) return;
+
+    const checks = {
+        length:  v => v.length >= 8,
+        number:  v => /\d/.test(v),
+        special: v => /[^A-Za-z0-9]/.test(v),
+    };
+
+    function setRule(name, ok) {
+        const li = rules.querySelector('[data-rule="' + name + '"]');
+        if (!li) return;
+        const icon = li.querySelector('i');
+        if (ok) {
+            li.classList.remove('text-slate-500');
+            li.classList.add('text-green-600');
+            icon.className = 'fa-solid fa-circle-check';
+        } else {
+            li.classList.remove('text-green-600');
+            li.classList.add('text-slate-500');
+            icon.className = 'fa-regular fa-circle text-slate-300';
+        }
+    }
+
+    function refresh() {
+        const v = pw.value || '';
+        Object.keys(checks).forEach(k => setRule(k, checks[k](v)));
+
+        if (confirm && (confirm.value || '').length > 0) {
+            match.classList.remove('hidden');
+            if (v === confirm.value) {
+                match.textContent = 'Passwords match.';
+                match.className = 'mt-1.5 text-xs text-green-600';
+            } else {
+                match.textContent = 'Passwords do not match.';
+                match.className = 'mt-1.5 text-xs text-red-600';
+            }
+        } else if (match) {
+            match.classList.add('hidden');
+        }
+    }
+
+    pw.addEventListener('input', refresh);
+    if (confirm) confirm.addEventListener('input', refresh);
+    refresh();
+})();
+</script>
 {% endblock %}

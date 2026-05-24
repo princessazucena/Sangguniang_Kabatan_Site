@@ -1,59 +1,433 @@
 {% extends "admin/_layout.html" %}
-{% block title %}Applications · Admin{% endblock %}
+{% block title %}Dashboard · Admin{% endblock %}
 
 {% set status_styles = {
     'pending':  'bg-amber-100 text-amber-800',
     'verified': 'bg-green-100 text-green-800',
     'rejected': 'bg-red-100 text-red-800',
+    'open':        'bg-green-100 text-green-800',
+    'upcoming':    'bg-amber-100 text-amber-800',
+    'closed':      'bg-slate-200 text-slate-700',
+    'unscheduled': 'bg-slate-100 text-slate-600',
 } %}
 
-{% block admin_content %}
-<div class="grid sm:grid-cols-3 gap-4 mb-6">
-    {% for key in ['pending', 'verified', 'rejected'] %}
-        <div class="bg-white rounded-xl shadow-sm p-4 border border-slate-100">
-            <div class="text-xs uppercase tracking-wide text-slate-500">{{ key }}</div>
-            <div class="text-3xl font-bold mt-1">{{ counts.get(key, 0) }}</div>
+{% macro stat_card(label, value, icon, tone='brand', sub=None) %}
+    {% set tone_styles = {
+        'brand':  'bg-brand-50 text-brand-700',
+        'blue':   'bg-blue-50 text-blue-700',
+        'green':  'bg-green-50 text-green-700',
+        'amber':  'bg-amber-50 text-amber-700',
+        'red':    'bg-red-50 text-red-700',
+        'purple': 'bg-purple-50 text-purple-700',
+        'slate':  'bg-slate-100 text-slate-700',
+    } %}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex items-center gap-3">
+        <span class="w-11 h-11 rounded-md flex items-center justify-center text-lg {{ tone_styles.get(tone, tone_styles['brand']) }}">
+            <i class="fa-solid {{ icon }}"></i>
+        </span>
+        <div class="min-w-0">
+            <p class="text-[11px] uppercase tracking-wide text-slate-500">{{ label }}</p>
+            <p class="text-2xl font-bold leading-tight truncate">{{ value }}</p>
+            {% if sub %}<p class="text-[11px] text-slate-500 truncate">{{ sub }}</p>{% endif %}
         </div>
-    {% endfor %}
+    </div>
+{% endmacro %}
+
+{% block admin_content %}
+<header class="mb-5 flex items-start justify-between gap-3 flex-wrap">
+    <div>
+        <h1 class="text-2xl font-bold text-brand-700">Dashboard</h1>
+        <p class="text-sm text-slate-500">
+            Hi, {{ session.get('full_name') or 'admin' }}. Here's what's happening across the portal.
+        </p>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+        <a href="{{ url_for('admin.applications') }}"
+           class="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium">
+            <i class="fa-solid fa-folder-open"></i> Review applications
+        </a>
+        <a href="{{ url_for('admin.announcements') }}"
+           class="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm font-medium">
+            <i class="fa-solid fa-bullhorn"></i> Post announcement
+        </a>
+    </div>
+</header>
+
+{# ===================== Stat cards ===================== #}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+    {{ stat_card('Pending review', pending_count, 'fa-hourglass-half', 'amber',
+                 sub='waiting on admin') }}
+    {{ stat_card('Verified scholars', verified_count, 'fa-circle-check', 'green',
+                 sub='approved applications') }}
+    {{ stat_card('Total students', students_total, 'fa-user-graduate', 'brand',
+                 sub=(students_active|string) ~ ' active · ' ~ (students_deactivated|string) ~ ' deactivated') }}
+    {{ stat_card('Event joiners', joiners_total, 'fa-handshake', 'blue',
+                 sub=(events_total|string) ~ ' joinable events') }}
 </div>
 
-<section class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-    <div class="px-5 py-3 border-b font-semibold">Applications</div>
-    {% if applications %}
-        <div class="overflow-x-auto max-h-[36rem] overflow-y-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-slate-600 text-left sticky top-0 z-10">
-                    <tr>
-                        <th class="px-5 py-2">Student</th>
-                        <th class="px-5 py-2">Submitted</th>
-                        <th class="px-5 py-2">Status</th>
-                        <th class="px-5 py-2"></th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100"
-                       data-paginate data-page-size="15"
-                       data-pagination-into="#applications-pagination">
-                    {% for a in applications %}
-                        <tr data-page-item>
-                            <td class="px-5 py-2">{{ a.student.full_name if a.student else '—' }}</td>
-                            <td class="px-5 py-2 text-slate-500">{{ a.created_at | ph_date }}</td>
-                            <td class="px-5 py-2">
-                                <span class="text-xs uppercase px-2 py-1 rounded {{ status_styles.get(a.status, 'bg-slate-100 text-slate-700') }}">
-                                    {{ a.status }}
-                                </span>
-                            </td>
-                            <td class="px-5 py-2 text-right">
-                                <a href="{{ url_for('admin.review', app_id=a.id) }}"
-                                   class="text-brand-600 hover:underline">Review</a>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+{% if open_registration %}
+    <div class="mb-5 rounded-xl border border-brand-200 bg-brand-50 p-4 flex items-center gap-3 flex-wrap">
+        <span class="w-10 h-10 rounded-full bg-brand-500 text-white flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-door-open"></i>
+        </span>
+        <div class="flex-1 min-w-0">
+            <p class="text-[11px] uppercase tracking-wide text-brand-700 font-semibold">
+                Registration window is open
+            </p>
+            <p class="font-semibold text-brand-800 truncate">{{ open_registration.title }}</p>
+            {% if open_registration.start_at and open_registration.end_at %}
+                <p class="text-xs text-brand-700/80">
+                    <i class="fa-regular fa-calendar mr-1"></i>
+                    {{ open_registration.start_at | ph }} → {{ open_registration.end_at | ph }}
+                </p>
+            {% endif %}
         </div>
-        <div id="applications-pagination"></div>
-    {% else %}
-        <p class="px-5 py-6 text-slate-500 text-sm">No applications yet.</p>
-    {% endif %}
-</section>
+        <a href="{{ url_for('admin.applications') }}"
+           class="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium">
+            <i class="fa-solid fa-clipboard-list"></i> Track applications
+        </a>
+    </div>
+{% endif %}
+
+{# ===================== Charts ===================== #}
+<div class="grid lg:grid-cols-2 gap-4 mb-5">
+
+    {# 14-day trend #}
+    <section class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+        <header class="flex items-center justify-between mb-3">
+            <div>
+                <h2 class="font-semibold">Submissions in the last 14 days</h2>
+                <p class="text-xs text-slate-500">Daily count of student applications.</p>
+            </div>
+            <i class="fa-solid fa-chart-line text-slate-300"></i>
+        </header>
+        <canvas id="chart-trend" height="120"></canvas>
+    </section>
+
+    {# Application status doughnut #}
+    <section class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+        <header class="flex items-center justify-between mb-3">
+            <div>
+                <h2 class="font-semibold">Application status</h2>
+                <p class="text-xs text-slate-500">Pending vs verified vs rejected.</p>
+            </div>
+            <i class="fa-solid fa-circle-half-stroke text-slate-300"></i>
+        </header>
+        <div class="h-[220px] flex items-center justify-center">
+            <canvas id="chart-status"></canvas>
+        </div>
+    </section>
+
+    {# Education level bar #}
+    <section class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+        <header class="flex items-center justify-between mb-3">
+            <div>
+                <h2 class="font-semibold">By education level</h2>
+                <p class="text-xs text-slate-500">All submitted applications.</p>
+            </div>
+            <i class="fa-solid fa-graduation-cap text-slate-300"></i>
+        </header>
+        <canvas id="chart-level" height="120"></canvas>
+    </section>
+
+    {# Year level bar #}
+    <section class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+        <header class="flex items-center justify-between mb-3">
+            <div>
+                <h2 class="font-semibold">By year level</h2>
+                <p class="text-xs text-slate-500">Distribution across grades / years.</p>
+            </div>
+            <i class="fa-solid fa-layer-group text-slate-300"></i>
+        </header>
+        <canvas id="chart-year" height="120"></canvas>
+    </section>
+
+    {# Announcement category mix #}
+    <section class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+        <header class="flex items-center justify-between mb-3">
+            <div>
+                <h2 class="font-semibold">Announcement mix</h2>
+                <p class="text-xs text-slate-500">Posts grouped by category.</p>
+            </div>
+            <i class="fa-solid fa-bullhorn text-slate-300"></i>
+        </header>
+        <div class="h-[220px] flex items-center justify-center">
+            <canvas id="chart-category"></canvas>
+        </div>
+    </section>
+
+    {# Top events by joiners #}
+    <section class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+        <header class="flex items-center justify-between mb-3">
+            <div>
+                <h2 class="font-semibold">Top events by joiners</h2>
+                <p class="text-xs text-slate-500">Pay-outs and KK assemblies combined.</p>
+            </div>
+            <i class="fa-solid fa-people-group text-slate-300"></i>
+        </header>
+        <canvas id="chart-top-events" height="120"></canvas>
+    </section>
+</div>
+
+{# ===================== Lists ===================== #}
+<div class="grid lg:grid-cols-2 gap-4">
+
+    <section class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <header class="px-4 py-3 border-b flex items-center justify-between">
+            <h2 class="font-semibold">Recent applications</h2>
+            <a href="{{ url_for('admin.applications') }}" class="text-xs text-brand-600 hover:underline">
+                See all &rarr;
+            </a>
+        </header>
+        {% if recent_apps %}
+            <ul class="divide-y divide-slate-100">
+                {% for a in recent_apps %}
+                    <li>
+                        <a href="{{ url_for('admin.review', app_id=a.id) }}"
+                           class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50">
+                            <span class="w-9 h-9 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-file-lines"></i>
+                            </span>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <p class="font-medium text-sm truncate">
+                                        {{ a.student.full_name if a.student else '—' }}
+                                    </p>
+                                    <span class="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded {{ status_styles.get(a.status, 'bg-slate-100 text-slate-700') }}">
+                                        {{ a.status }}
+                                    </span>
+                                </div>
+                                <p class="text-[11px] text-slate-500 truncate">
+                                    {{ a.registration.title if a.registration else 'No registration' }}
+                                    <span class="text-slate-300">·</span>
+                                    {{ a.created_at | ph_date }}
+                                </p>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-slate-300 mt-1 text-xs"></i>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="px-4 py-8 text-center text-sm text-slate-500">No submissions yet.</p>
+        {% endif %}
+    </section>
+
+    <section class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <header class="px-4 py-3 border-b flex items-center justify-between">
+            <h2 class="font-semibold">Upcoming &amp; open events</h2>
+            <a href="{{ url_for('admin.announcements') }}" class="text-xs text-brand-600 hover:underline">
+                Manage &rarr;
+            </a>
+        </header>
+        {% if upcoming_events %}
+            <ul class="divide-y divide-slate-100">
+                {% for e in upcoming_events %}
+                    <li>
+                        <a href="{{ url_for('admin.announcement_joiners', anc_id=e.id) }}"
+                           class="block px-4 py-3 hover:bg-slate-50">
+                            <div class="flex items-center gap-2 flex-wrap mb-0.5">
+                                <span class="text-[10px] uppercase px-2 py-0.5 rounded
+                                             {% if e.category == 'kk_assembly' %}bg-purple-50 text-purple-700
+                                             {% else %}bg-blue-50 text-blue-700{% endif %}">
+                                    {% if e.category == 'kk_assembly' %}KK Assembly{% else %}Pay-out{% endif %}
+                                </span>
+                                <span class="text-[10px] uppercase px-2 py-0.5 rounded {{ status_styles.get(e.status, 'bg-slate-100 text-slate-700') }}">
+                                    {{ e.status }}
+                                </span>
+                            </div>
+                            <p class="font-medium text-sm truncate">{{ e.title }}</p>
+                            {% if e.start_at and e.end_at %}
+                                <p class="text-[11px] text-slate-500">
+                                    <i class="fa-regular fa-calendar mr-1"></i>
+                                    {{ e.start_at | ph }} → {{ e.end_at | ph }}
+                                </p>
+                            {% endif %}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="px-4 py-8 text-center text-sm text-slate-500">No upcoming events.</p>
+        {% endif %}
+    </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    if (typeof Chart === 'undefined') return;
+
+    const palette = {
+        brand:  '#6f9d63',
+        green:  '#22c55e',
+        amber:  '#f59e0b',
+        red:    '#ef4444',
+        blue:   '#3b82f6',
+        purple: '#8b5cf6',
+        slate:  '#94a3b8',
+    };
+
+    Chart.defaults.font.family = 'Poppins, system-ui, sans-serif';
+    Chart.defaults.color = '#475569';
+    Chart.defaults.plugins.legend.labels.boxWidth = 12;
+
+    // ---------- 14-day submissions trend ----------
+    const trendCtx = document.getElementById('chart-trend');
+    if (trendCtx) {
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: {{ trend_chart.labels | tojson }},
+                datasets: [{
+                    label: 'Submissions',
+                    data: {{ trend_chart.values | tojson }},
+                    borderColor: palette.brand,
+                    backgroundColor: 'rgba(111, 157, 99, 0.18)',
+                    borderWidth: 2,
+                    tension: 0.35,
+                    fill: true,
+                    pointRadius: 3,
+                    pointBackgroundColor: palette.brand,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 } },
+                    x: { grid: { display: false } },
+                },
+            },
+        });
+    }
+
+    // ---------- Application status doughnut ----------
+    const statusCtx = document.getElementById('chart-status');
+    if (statusCtx) {
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ status_chart.labels | tojson }},
+                datasets: [{
+                    data: {{ status_chart.values | tojson }},
+                    backgroundColor: [palette.amber, palette.green, palette.red],
+                    borderWidth: 0,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '62%',
+                plugins: {
+                    legend: { position: 'bottom' },
+                },
+            },
+        });
+    }
+
+    // ---------- Education level bar ----------
+    const levelCtx = document.getElementById('chart-level');
+    if (levelCtx) {
+        new Chart(levelCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ level_chart.labels | tojson }},
+                datasets: [{
+                    label: 'Applications',
+                    data: {{ level_chart.values | tojson }},
+                    backgroundColor: palette.brand,
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 } },
+                    x: { grid: { display: false } },
+                },
+            },
+        });
+    }
+
+    // ---------- Year level bar ----------
+    const yearCtx = document.getElementById('chart-year');
+    if (yearCtx) {
+        new Chart(yearCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ year_chart.labels | tojson }},
+                datasets: [{
+                    label: 'Applications',
+                    data: {{ year_chart.values | tojson }},
+                    backgroundColor: palette.blue,
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 } },
+                    x: { grid: { display: false } },
+                },
+            },
+        });
+    }
+
+    // ---------- Announcement category pie ----------
+    const catCtx = document.getElementById('chart-category');
+    if (catCtx) {
+        new Chart(catCtx, {
+            type: 'pie',
+            data: {
+                labels: {{ category_chart.labels | tojson }},
+                datasets: [{
+                    data: {{ category_chart.values | tojson }},
+                    backgroundColor: [palette.brand, palette.blue, palette.purple, palette.slate, palette.amber],
+                    borderWidth: 0,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                },
+            },
+        });
+    }
+
+    // ---------- Top events horizontal bar ----------
+    const topCtx = document.getElementById('chart-top-events');
+    if (topCtx) {
+        new Chart(topCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ top_events_chart.labels | tojson }},
+                datasets: [{
+                    label: 'Joiners',
+                    data: {{ top_events_chart.values | tojson }},
+                    backgroundColor: palette.purple,
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, ticks: { precision: 0 } },
+                    y: { grid: { display: false } },
+                },
+            },
+        });
+    }
+})();
+</script>
 {% endblock %}

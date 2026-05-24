@@ -8,7 +8,8 @@ from flask import render_template, request, redirect, url_for, flash, session
 
 from supabase_client import get_supabase
 from services.announcements import (
-    CATEGORIES, CATEGORY_LABELS, annotate, schedule_status,
+    CATEGORIES, CATEGORY_LABELS, JOINABLE_CATEGORIES, SCHEDULED_CATEGORIES,
+    annotate, schedule_status,
 )
 
 from ._common import admin_bp, admin_required, parse_dt_local
@@ -31,7 +32,7 @@ def announcements():
         if not title or not body:
             flash("Title and body are required.", "error")
             return redirect(url_for("admin.announcements"))
-        if category in ("registration", "payout"):
+        if category in SCHEDULED_CATEGORIES:
             if not start_at or not end_at:
                 flash("Scheduled announcements need both a start and end date.", "error")
                 return redirect(url_for("admin.announcements"))
@@ -58,14 +59,16 @@ def announcements():
     ).data or []
     annotate(items)
 
-    # Attach join counts for payout announcements.
-    payout_ids = [a["id"] for a in items if a.get("category") == "payout"]
-    counts = {pid: 0 for pid in payout_ids}
-    if payout_ids:
+    # Attach join counts for joinable announcements (payout + kk_assembly).
+    joinable_ids = [
+        a["id"] for a in items if a.get("category") in JOINABLE_CATEGORIES
+    ]
+    counts = {pid: 0 for pid in joinable_ids}
+    if joinable_ids:
         joins = (
             sb.table("announcement_joins")
             .select("announcement_id")
-            .in_("announcement_id", payout_ids)
+            .in_("announcement_id", joinable_ids)
             .execute()
         ).data or []
         for j in joins:
@@ -91,8 +94,8 @@ def announcement_joiners(anc_id: int):
         flash("Announcement not found.", "error")
         return redirect(url_for("admin.announcements"))
 
-    if anc.get("category") != "payout":
-        flash("Only pay-out announcements have joiners.", "error")
+    if anc.get("category") not in JOINABLE_CATEGORIES:
+        flash("Only pay-out and KK assembly announcements have joiners.", "error")
         return redirect(url_for("admin.announcements"))
 
     anc["status"] = schedule_status(anc)

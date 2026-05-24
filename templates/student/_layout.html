@@ -31,6 +31,11 @@
             <nav class="space-y-1">
                 <a href="{{ url_for('student.dashboard') }}"
                    class="{{ nav_base }} {% if request.endpoint == 'student.dashboard' %}{{ nav_active }}{% else %}{{ nav_idle }}{% endif %}">
+                    <i class="fa-solid fa-gauge-high w-5 text-center"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{{ url_for('student.applications_list') }}"
+                   class="{{ nav_base }} {% if request.endpoint in ['student.applications_list', 'student.application'] %}{{ nav_active }}{% else %}{{ nav_idle }}{% endif %}">
                     <i class="fa-solid fa-file-lines w-5 text-center"></i>
                     <span>My applications</span>
                 </a>
@@ -80,6 +85,11 @@
         <nav class="divide-y divide-slate-100">
             <a href="{{ url_for('student.dashboard') }}"
                class="{{ m_base }} {% if request.endpoint == 'student.dashboard' %}{{ m_active }}{% else %}{{ m_idle }}{% endif %}">
+                <i class="fa-solid fa-gauge-high w-5 text-center"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('student.applications_list') }}"
+               class="{{ m_base }} {% if request.endpoint in ['student.applications_list', 'student.application'] %}{{ m_active }}{% else %}{{ m_idle }}{% endif %}">
                 <i class="fa-solid fa-file-lines w-5 text-center"></i>
                 <span>My applications</span>
             </a>

@@ -16,7 +16,7 @@
 } %}
 
 {% block admin_content %}
-<a href="{{ url_for('admin.dashboard') }}" class="text-sm text-brand-600 hover:underline">&larr; All applications</a>
+<a href="{{ url_for('admin.applications') }}" class="text-sm text-brand-600 hover:underline">&larr; All applications</a>
 
 <div class="grid md:grid-cols-3 gap-6 mt-2">
     <section class="md:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-slate-100">
@@ -29,6 +29,61 @@
             </span>
         </div>
         <p class="text-sm text-slate-500 mt-1">Submitted {{ app.created_at | ph_date }}</p>
+
+        {# ===== Applicant details ===== #}
+        <div class="mt-5 rounded-lg border border-slate-100 bg-slate-50/60 p-4">
+            <div class="flex items-center justify-between gap-2 flex-wrap mb-3">
+                <h2 class="font-semibold">Applicant details</h2>
+                {% if app.student and app.student.id %}
+                    <a href="{{ url_for('admin.user_detail', student_id=app.student.id) }}"
+                       class="text-xs text-brand-600 hover:underline">
+                        View full profile <i class="fa-solid fa-arrow-right ml-0.5"></i>
+                    </a>
+                {% endif %}
+            </div>
+
+            <dl class="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                <div>
+                    <dt class="text-xs font-medium text-slate-500">Full name</dt>
+                    <dd class="text-slate-800">{{ app.student.full_name if app.student else '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-slate-500">Email</dt>
+                    <dd class="text-slate-800 break-all">{{ (app.student.email if app.student else '') or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-slate-500">Education level</dt>
+                    <dd class="text-slate-800">{{ app.level_label or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-slate-500">Grade / Year level</dt>
+                    <dd>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-brand-50 text-brand-700 text-xs font-medium">
+                            <i class="fa-solid fa-graduation-cap"></i>
+                            {{ app.year_label or '—' }}
+                        </span>
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-slate-500">Facebook</dt>
+                    <dd class="text-slate-800 truncate">
+                        {% if app.student and app.student.facebook_url %}
+                            <a href="{{ app.student.facebook_url }}" target="_blank" rel="noopener"
+                               class="text-brand-700 hover:underline inline-flex items-center gap-1">
+                                <i class="fa-brands fa-facebook"></i>
+                                <span class="truncate">{{ app.student.facebook_url }}</span>
+                            </a>
+                        {% else %}—{% endif %}
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-slate-500">Joined</dt>
+                    <dd class="text-slate-800">
+                        {{ (app.student.created_at | ph_date) if app.student and app.student.created_at else '—' }}
+                    </dd>
+                </div>
+            </dl>
+        </div>
 
         <div class="mt-5 flex items-center justify-between gap-2 flex-wrap">
             <h2 class="font-semibold">Uploaded documents</h2>

@@ -12,6 +12,7 @@ Flow:
     /login   -> blocks accounts where email_verified=false.
 """
 import os
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -27,6 +28,21 @@ from services.announcements import annotate
 public_bp = Blueprint("public", __name__)
 
 CODE_TTL_MINUTES = 15  # how long a verification code is valid
+
+# Password rules: at least 8 chars, with one digit and one special character.
+PASSWORD_MIN_LENGTH = 8
+PASSWORD_SPECIAL_RE = re.compile(r"[^A-Za-z0-9]")
+
+
+def _validate_password(password: str) -> str | None:
+    """Return an error message if the password is weak, else ``None``."""
+    if len(password) < PASSWORD_MIN_LENGTH:
+        return f"Password must be at least {PASSWORD_MIN_LENGTH} characters."
+    if not any(ch.isdigit() for ch in password):
+        return "Password must contain at least one number."
+    if not PASSWORD_SPECIAL_RE.search(password):
+        return "Password must contain at least one special character (e.g. ! @ # $ %)."
+    return None
 
 
 # -----------------------------------------------------------------
@@ -147,6 +163,13 @@ def signup():
             "suffix":       (request.form.get("suffix") or "").strip(),
             "email":        (request.form.get("email") or "").strip().lower(),
             "facebook_url": (request.form.get("facebook_url") or "").strip(),
+            "address_house_no": (request.form.get("address_house_no") or "").strip(),
+            "address_street":   (request.form.get("address_street") or "").strip(),
+            "address_purok":    (request.form.get("address_purok") or "").strip(),
+            "address_barangay": (request.form.get("address_barangay") or "").strip(),
+            "address_city":     (request.form.get("address_city") or "").strip(),
+            "address_province": (request.form.get("address_province") or "").strip(),
+            "address_zip":      (request.form.get("address_zip") or "").strip(),
         }
         password   = request.form.get("password") or ""
         confirm_pw = request.form.get("password_confirm") or ""
@@ -160,8 +183,25 @@ def signup():
         if not form["facebook_url"].startswith(("http://", "https://")):
             flash("Please paste a valid Facebook URL (starting with https://).", "error")
             return render_template("public/signup.html", form=form)
-        if len(password) < 6:
-            flash("Password must be at least 6 characters.", "error")
+        # Address: house no., purok, barangay, city, and province are required.
+        # Street and ZIP are optional.
+        required_addr = {
+            "address_house_no": "House / Lot / Block number",
+            "address_purok":    "Purok / Sitio",
+            "address_barangay": "Barangay",
+            "address_city":     "City / Municipality",
+            "address_province": "Province",
+        }
+        for field, label in required_addr.items():
+            if not form[field]:
+                flash(f"{label} is required.", "error")
+                return render_template("public/signup.html", form=form)
+        if form["address_zip"] and not (form["address_zip"].isdigit() and len(form["address_zip"]) == 4):
+            flash("ZIP code must be 4 digits.", "error")
+            return render_template("public/signup.html", form=form)
+        pw_err = _validate_password(password)
+        if pw_err:
+            flash(pw_err, "error")
             return render_template("public/signup.html", form=form)
         if password != confirm_pw:
             flash("Passwords do not match.", "error")

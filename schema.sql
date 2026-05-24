@@ -12,6 +12,13 @@ create table if not exists public.profiles (
     last_name    text,
     suffix       text,
     facebook_url text,
+    address_house_no text,
+    address_street   text,
+    address_purok    text,
+    address_barangay text,
+    address_city     text,
+    address_province text,
+    address_zip      text,
     role text not null default 'student' check (role in ('student','admin')),
     created_at timestamptz not null default now()
 );

@@ -6,7 +6,7 @@ Lists every announcement and lets students join a pay-out window.
 from flask import render_template, redirect, url_for, flash, session
 
 from supabase_client import get_supabase
-from services.announcements import annotate, schedule_status
+from services.announcements import annotate, schedule_status, JOINABLE_CATEGORIES
 
 from ._common import student_bp, student_required
 
@@ -26,13 +26,15 @@ def announcements():
 
     student_id = session["user_id"]
     joined_ids: set[int] = set()
-    payout_ids = [a["id"] for a in items if a.get("category") == "payout"]
-    if payout_ids:
+    joinable_ids = [
+        a["id"] for a in items if a.get("category") in JOINABLE_CATEGORIES
+    ]
+    if joinable_ids:
         rows = (
             sb.table("announcement_joins")
             .select("announcement_id")
             .eq("student_id", student_id)
-            .in_("announcement_id", payout_ids)
+            .in_("announcement_id", joinable_ids)
             .execute()
         ).data or []
         joined_ids = {r["announcement_id"] for r in rows}
@@ -51,7 +53,7 @@ def join_payout(anc_id: int):
     anc = (
         sb.table("announcements").select("*").eq("id", anc_id).single().execute()
     ).data
-    if not anc or anc.get("category") != "payout":
+    if not anc or anc.get("category") not in JOINABLE_CATEGORIES:
         flash("That announcement does not accept joiners.", "error")
         return redirect(url_for("student.announcements"))
 
@@ -65,9 +67,12 @@ def join_payout(anc_id: int):
             "announcement_id": anc_id,
             "student_id":      student_id,
         }).execute()
-        flash("You're on the list. Check announcements again on the payout date.", "success")
+        if anc.get("category") == "kk_assembly":
+            flash("You're on the list. See you at the KK assembly.", "success")
+        else:
+            flash("You're on the list. Check announcements again on the payout date.", "success")
     except Exception:
         # Likely a duplicate (unique constraint) — treat as success.
-        flash("You already joined this pay-out.", "success")
+        flash("You already joined this event.", "success")
 
     return redirect(url_for("student.announcements"))

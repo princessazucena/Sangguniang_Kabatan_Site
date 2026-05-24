@@ -29,7 +29,12 @@
 
             <nav class="space-y-1">
                 <a href="{{ url_for('admin.dashboard') }}"
-                   class="{{ nav_base }} {% if request.endpoint in ['admin.dashboard', 'admin.review'] %}{{ nav_active }}{% else %}{{ nav_idle }}{% endif %}">
+                   class="{{ nav_base }} {% if request.endpoint == 'admin.dashboard' %}{{ nav_active }}{% else %}{{ nav_idle }}{% endif %}">
+                    <i class="fa-solid fa-gauge-high w-5 text-center"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{{ url_for('admin.applications') }}"
+                   class="{{ nav_base }} {% if request.endpoint in ['admin.applications', 'admin.review'] %}{{ nav_active }}{% else %}{{ nav_idle }}{% endif %}">
                     <i class="fa-solid fa-folder-open w-5 text-center"></i>
                     <span>Applications</span>
                 </a>
@@ -47,6 +52,11 @@
                    class="{{ nav_base }} {% if request.endpoint in ['admin.announcements', 'admin.announcement_joiners'] %}{{ nav_active }}{% else %}{{ nav_idle }}{% endif %}">
                     <i class="fa-solid fa-bullhorn w-5 text-center"></i>
                     <span>Announcements</span>
+                </a>
+                <a href="{{ url_for('admin.certificates') }}"
+                   class="{{ nav_base }} {% if request.endpoint in ['admin.certificates', 'admin.certificate_preview'] %}{{ nav_active }}{% else %}{{ nav_idle }}{% endif %}">
+                    <i class="fa-solid fa-certificate w-5 text-center"></i>
+                    <span>Certificates</span>
                 </a>
                 <a href="{{ url_for('public.home') }}"
                    class="{{ nav_base }} {{ nav_idle }}">
@@ -88,7 +98,12 @@
 
         <nav class="divide-y divide-slate-100">
             <a href="{{ url_for('admin.dashboard') }}"
-               class="{{ m_base }} {% if request.endpoint in ['admin.dashboard', 'admin.review'] %}{{ m_active }}{% else %}{{ m_idle }}{% endif %}">
+               class="{{ m_base }} {% if request.endpoint == 'admin.dashboard' %}{{ m_active }}{% else %}{{ m_idle }}{% endif %}">
+                <i class="fa-solid fa-gauge-high w-5 text-center"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('admin.applications') }}"
+               class="{{ m_base }} {% if request.endpoint in ['admin.applications', 'admin.review'] %}{{ m_active }}{% else %}{{ m_idle }}{% endif %}">
                 <i class="fa-solid fa-folder-open w-5 text-center"></i>
                 <span>Applications</span>
             </a>
@@ -106,6 +121,11 @@
                class="{{ m_base }} {% if request.endpoint in ['admin.announcements', 'admin.announcement_joiners'] %}{{ m_active }}{% else %}{{ m_idle }}{% endif %}">
                 <i class="fa-solid fa-bullhorn w-5 text-center"></i>
                 <span>Announcements</span>
+            </a>
+            <a href="{{ url_for('admin.certificates') }}"
+               class="{{ m_base }} {% if request.endpoint in ['admin.certificates', 'admin.certificate_preview'] %}{{ m_active }}{% else %}{{ m_idle }}{% endif %}">
+                <i class="fa-solid fa-certificate w-5 text-center"></i>
+                <span>Certificates</span>
             </a>
             <a href="{{ url_for('public.home') }}"
                class="{{ m_base }} {{ m_idle }}">

@@ -1,0 +1,117 @@
+{% extends "student/_layout.html" %}
+{% block title %}My Applications · Sangguniang Kabataan ng Bukal Scholarship Portal{% endblock %}
+
+{% set status_styles = {
+    'pending':  'bg-amber-100 text-amber-800',
+    'verified': 'bg-green-100 text-green-800',
+    'rejected': 'bg-red-100 text-red-800',
+} %}
+
+{% block student_content %}
+<div class="space-y-3 sm:space-y-5">
+
+    {# ---------- Open registration banner ---------- #}
+    {% if open_registration %}
+        <div class="rounded-xl border border-brand-200 bg-brand-50 p-3 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 shadow-sm">
+            <span class="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-brand-500 text-white flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-bullhorn"></i>
+            </span>
+            <div class="flex-1 min-w-0">
+                <p class="text-[11px] sm:text-xs uppercase tracking-wide text-brand-700 font-semibold">
+                    Registration is open
+                </p>
+                <p class="font-semibold text-brand-800 truncate text-sm sm:text-base">{{ open_registration.title }}</p>
+                {% if open_registration.start_at and open_registration.end_at %}
+                    <p class="text-[11px] sm:text-xs text-brand-700/80 mt-0.5">
+                        <i class="fa-regular fa-calendar mr-1"></i>
+                        {{ open_registration.start_at | ph }} → {{ open_registration.end_at | ph }}
+                    </p>
+                {% endif %}
+            </div>
+            {% if open_application %}
+                <a href="{{ url_for('student.application', app_id=open_application.id) }}"
+                   class="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold whitespace-nowrap">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    Continue
+                </a>
+            {% else %}
+                <form method="post" action="{{ url_for('student.apply') }}">
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold whitespace-nowrap">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        Apply now
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="rounded-xl border border-slate-200 bg-white p-3 sm:p-5 flex items-start gap-2 sm:gap-3 shadow-sm">
+            <span class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-lock"></i>
+            </span>
+            <div class="text-xs sm:text-sm text-slate-600">
+                <p class="font-semibold text-slate-800 text-sm sm:text-base">Scholarship registration is currently closed.</p>
+                <p>Check the
+                    <a href="{{ url_for('student.announcements') }}" class="text-brand-700 underline">announcements</a>
+                    for the next registration window.</p>
+            </div>
+        </div>
+    {% endif %}
+
+    {# ---------- Application list ---------- #}
+    <section class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <header class="px-3 sm:px-5 py-2 sm:py-3 border-b flex items-center justify-between">
+            <h1 class="font-semibold text-sm sm:text-base">My applications</h1>
+            <span class="text-[11px] sm:text-xs text-slate-500">{{ applications | length }} total</span>
+        </header>
+
+        {% if applications %}
+            <ul class="divide-y divide-slate-100">
+                {% for a in applications %}
+                    {% set reg = a.registration %}
+                    <li>
+                        <a href="{{ url_for('student.application', app_id=a.id) }}"
+                           class="flex items-start gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-4 hover:bg-slate-50 transition">
+                            <span class="w-9 h-9 sm:w-10 sm:h-10 rounded-md bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-file-lines"></i>
+                            </span>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                    <p class="font-semibold text-slate-800 truncate text-sm">
+                                        {{ reg.title if reg else 'Application' }}
+                                    </p>
+                                    <span class="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded {{ status_styles.get(a.status, 'bg-slate-100 text-slate-700') }}">
+                                        {{ a.status }}
+                                    </span>
+                                </div>
+                                <p class="text-[11px] sm:text-xs text-slate-500 mt-0.5">
+                                    {{ a.level_label }} · {{ a.year_label }}
+                                    <span class="text-slate-300">·</span>
+                                    {{ a.created_at | ph_date }}
+                                </p>
+                                {% if a.notes %}
+                                    <p class="text-[11px] sm:text-xs text-slate-600 mt-1 line-clamp-2">
+                                        <i class="fa-regular fa-comment mr-1 text-slate-400"></i>
+                                        {{ a.notes }}
+                                    </p>
+                                {% endif %}
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-slate-300 mt-1 text-xs"></i>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="px-4 py-8 text-center text-xs sm:text-sm text-slate-500">
+                <i class="fa-regular fa-folder-open text-2xl sm:text-3xl text-slate-300 mb-2 block"></i>
+                You don't have any applications yet.
+                {% if open_registration %}
+                    Tap <span class="font-semibold">Apply now</span> above to get started.
+                {% else %}
+                    Wait for the next registration window.
+                {% endif %}
+            </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

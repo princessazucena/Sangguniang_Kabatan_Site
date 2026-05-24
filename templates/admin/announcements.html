@@ -10,6 +10,7 @@
 {% set category_styles = {
     'registration': 'bg-brand-50 text-brand-700',
     'payout':       'bg-blue-50 text-blue-700',
+    'kk_assembly':  'bg-purple-50 text-purple-700',
     'general':      'bg-slate-100 text-slate-700',
 } %}
 
@@ -58,7 +59,7 @@
                     <p class="mt-2 text-sm text-slate-700 whitespace-pre-line">{{ a.body }}</p>
 
                     <div class="mt-3 flex items-center gap-3 flex-wrap">
-                        {% if a.category == 'payout' %}
+                        {% if a.category in ('payout', 'kk_assembly') %}
                             <a href="{{ url_for('admin.announcement_joiners', anc_id=a.id) }}"
                                class="text-sm text-brand-600 hover:underline">
                                 <i class="fa-solid fa-users mr-1"></i>
@@ -107,6 +108,7 @@
                         class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-400">
                     <option value="registration">Scholarship Registration</option>
                     <option value="payout">Scholarship Pay Out</option>
+                    <option value="kk_assembly">KK Assembly</option>
                     <option value="general">General</option>
                 </select>
             </div>
@@ -134,7 +136,8 @@
                 </div>
                 <p class="text-xs text-slate-500">
                     For <span class="font-medium">Registration</span>, students can apply / upload only between these dates.<br/>
-                    For <span class="font-medium">Pay Out</span>, students can join only between these dates.
+                    For <span class="font-medium">Pay Out</span>, students can join only between these dates.<br/>
+                    For <span class="font-medium">KK Assembly</span>, students can join only between these dates.
                 </p>
             </div>
 
@@ -179,8 +182,9 @@
     if (cat && sched) {
         const startInput = sched.querySelector('input[name="start_at"]');
         const endInput   = sched.querySelector('input[name="end_at"]');
+        const scheduledCats = new Set(['registration', 'payout', 'kk_assembly']);
         function refresh() {
-            const scheduled = cat.value === 'registration' || cat.value === 'payout';
+            const scheduled = scheduledCats.has(cat.value);
             sched.style.display = scheduled ? '' : 'none';
             startInput.required = scheduled;
             endInput.required   = scheduled;

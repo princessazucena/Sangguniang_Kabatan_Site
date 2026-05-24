@@ -1,116 +1,314 @@
 {% extends "student/_layout.html" %}
-{% block title %}My Applications · Sangguniang Kabataan ng Bukal Scholarship Portal{% endblock %}
+{% block title %}Dashboard · Sangguniang Kabataan ng Bukal Scholarship Portal{% endblock %}
 
 {% set status_styles = {
-    'pending':  'bg-amber-100 text-amber-800',
-    'verified': 'bg-green-100 text-green-800',
-    'rejected': 'bg-red-100 text-red-800',
+    'pending':     'bg-amber-100 text-amber-800',
+    'verified':    'bg-green-100 text-green-800',
+    'rejected':    'bg-red-100 text-red-800',
+    'open':        'bg-green-100 text-green-800',
+    'upcoming':    'bg-amber-100 text-amber-800',
+    'closed':      'bg-slate-200 text-slate-700',
+    'unscheduled': 'bg-slate-100 text-slate-600',
 } %}
+{% set category_labels = {
+    'registration': 'Scholarship Registration',
+    'payout':       'Scholarship Pay Out',
+    'kk_assembly':  'KK Assembly',
+    'general':      'General',
+} %}
+{% set category_styles = {
+    'registration': 'bg-brand-50 text-brand-700',
+    'payout':       'bg-blue-50 text-blue-700',
+    'kk_assembly':  'bg-purple-50 text-purple-700',
+    'general':      'bg-slate-100 text-slate-700',
+} %}
+
+{% macro quick_action(href, icon, title, sub) %}
+    <a href="{{ href }}"
+       class="flex items-center gap-3 p-3 sm:p-4 rounded-xl border border-slate-100 bg-white hover:border-brand-300 hover:bg-brand-50/40 transition shadow-sm">
+        <span class="w-10 h-10 rounded-md flex items-center justify-center bg-brand-50 text-brand-700">
+            <i class="fa-solid {{ icon }}"></i>
+        </span>
+        <div class="min-w-0">
+            <p class="font-semibold text-sm text-slate-800 truncate">{{ title }}</p>
+            <p class="text-[11px] text-slate-500 truncate">{{ sub }}</p>
+        </div>
+    </a>
+{% endmacro %}
 
 {% block student_content %}
 <div class="space-y-3 sm:space-y-5">
 
-    {# ---------- Open registration banner ---------- #}
-    {% if open_registration %}
-        <div class="rounded-xl border border-brand-200 bg-brand-50 p-3 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 shadow-sm">
-            <span class="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-brand-500 text-white flex items-center justify-center shrink-0">
-                <i class="fa-solid fa-bullhorn"></i>
-            </span>
-            <div class="flex-1 min-w-0">
-                <p class="text-[11px] sm:text-xs uppercase tracking-wide text-brand-700 font-semibold">
-                    Registration is open
+    {# ---------- Greeting + open registration banner ---------- #}
+    <section class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 sm:p-5">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div class="min-w-0">
+                <p class="text-xs uppercase tracking-wide text-slate-500">Welcome back</p>
+                <h1 class="text-lg sm:text-2xl font-bold text-slate-800 truncate">
+                    Hi, {{ session.get('full_name') or 'student' }}
+                </h1>
+                <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                    Here's a quick look at your scholarship account.
                 </p>
-                <p class="font-semibold text-brand-800 truncate text-sm sm:text-base">{{ open_registration.title }}</p>
-                {% if open_registration.start_at and open_registration.end_at %}
-                    <p class="text-[11px] sm:text-xs text-brand-700/80 mt-0.5">
-                        <i class="fa-regular fa-calendar mr-1"></i>
-                        {{ open_registration.start_at | ph }} → {{ open_registration.end_at | ph }}
-                    </p>
-                {% endif %}
             </div>
-            {% if open_application %}
-                <a href="{{ url_for('student.application', app_id=open_application.id) }}"
-                   class="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold whitespace-nowrap">
-                    <i class="fa-solid fa-pen-to-square"></i>
-                    Continue
-                </a>
+
+            {% if open_registration %}
+                <div class="rounded-xl border border-brand-200 bg-brand-50 p-3 sm:p-4 flex items-center gap-3 flex-1 sm:flex-none min-w-[14rem]">
+                    <span class="w-9 h-9 rounded-full bg-brand-500 text-white flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-bullhorn"></i>
+                    </span>
+                    <div class="min-w-0">
+                        <p class="text-[10px] uppercase tracking-wide text-brand-700 font-semibold">
+                            Registration is open
+                        </p>
+                        <p class="font-semibold text-brand-800 truncate text-sm">{{ open_registration.title }}</p>
+                        {% if open_application %}
+                            <a href="{{ url_for('student.application', app_id=open_application.id) }}"
+                               class="inline-flex items-center gap-1 text-xs text-brand-700 hover:underline mt-0.5">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                                Continue your application
+                            </a>
+                        {% else %}
+                            <form method="post" action="{{ url_for('student.apply') }}" class="mt-1">
+                                <button type="submit"
+                                        class="inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-md bg-brand-500 hover:bg-brand-600 text-white font-medium">
+                                    <i class="fa-solid fa-paper-plane"></i>
+                                    Apply now
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
             {% else %}
-                <form method="post" action="{{ url_for('student.apply') }}">
-                    <button type="submit"
-                            class="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold whitespace-nowrap">
-                        <i class="fa-solid fa-paper-plane"></i>
-                        Apply now
-                    </button>
-                </form>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4 flex items-center gap-3 flex-1 sm:flex-none min-w-[14rem]">
+                    <span class="w-9 h-9 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-lock"></i>
+                    </span>
+                    <div class="min-w-0">
+                        <p class="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">
+                            Registration closed
+                        </p>
+                        <p class="text-xs text-slate-600">
+                            Watch the announcements for the next window.
+                        </p>
+                    </div>
+                </div>
             {% endif %}
         </div>
-    {% else %}
-        <div class="rounded-xl border border-slate-200 bg-white p-3 sm:p-5 flex items-start gap-2 sm:gap-3 shadow-sm">
-            <span class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
-                <i class="fa-solid fa-lock"></i>
-            </span>
-            <div class="text-xs sm:text-sm text-slate-600">
-                <p class="font-semibold text-slate-800 text-sm sm:text-base">Scholarship registration is currently closed.</p>
-                <p>Check the
-                    <a href="{{ url_for('student.announcements') }}" class="text-brand-700 underline">announcements</a>
-                    for the next registration window.</p>
-            </div>
+    </section>
+
+    {# ---------- Quick stats ---------- #}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-3 sm:p-4">
+            <p class="text-[11px] uppercase tracking-wide text-slate-500">Total</p>
+            <p class="text-2xl font-bold text-slate-800">{{ status_counts.total }}</p>
+            <p class="text-[11px] text-slate-500">Applications</p>
         </div>
-    {% endif %}
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-3 sm:p-4">
+            <p class="text-[11px] uppercase tracking-wide text-amber-700">Pending</p>
+            <p class="text-2xl font-bold text-amber-700">{{ status_counts.pending }}</p>
+            <p class="text-[11px] text-slate-500">Awaiting review</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-3 sm:p-4">
+            <p class="text-[11px] uppercase tracking-wide text-green-700">Verified</p>
+            <p class="text-2xl font-bold text-green-700">{{ status_counts.verified }}</p>
+            <p class="text-[11px] text-slate-500">Approved</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-3 sm:p-4">
+            <p class="text-[11px] uppercase tracking-wide text-red-700">Needs updates</p>
+            <p class="text-2xl font-bold text-red-700">{{ status_counts.rejected }}</p>
+            <p class="text-[11px] text-slate-500">Re-submit required</p>
+        </div>
+    </div>
 
-    {# ---------- Application list ---------- #}
-    <section class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        <header class="px-3 sm:px-5 py-2 sm:py-3 border-b flex items-center justify-between">
-            <h1 class="font-semibold text-sm sm:text-base">My applications</h1>
-            <span class="text-[11px] sm:text-xs text-slate-500">{{ applications | length }} total</span>
-        </header>
+    {# ---------- Quick actions ---------- #}
+    <section>
+        <h2 class="text-sm font-semibold text-slate-700 mb-2">Quick actions</h2>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {{ quick_action(
+                url_for('student.applications_list'),
+                'fa-file-lines',
+                'My applications',
+                (status_counts.total | string) ~ ' total'
+            ) }}
+            {{ quick_action(
+                url_for('student.profile'),
+                'fa-user',
+                'My profile',
+                'Personal info & email'
+            ) }}
+            {{ quick_action(
+                url_for('student.announcements'),
+                'fa-bullhorn',
+                'Announcements',
+                'See updates and events'
+            ) }}
+            {% if active_application %}
+                {{ quick_action(
+                    url_for('student.application', app_id=active_application.id),
+                    'fa-cloud-arrow-up',
+                    'Upload documents',
+                    'Continue your active application'
+                ) }}
+            {% else %}
+                {{ quick_action(
+                    url_for('student.applications_list'),
+                    'fa-paper-plane',
+                    'Start an application',
+                    'When registration opens'
+                ) }}
+            {% endif %}
+        </div>
+    </section>
 
-        {% if applications %}
-            <ul class="divide-y divide-slate-100">
-                {% for a in applications %}
-                    {% set reg = a.registration %}
-                    <li>
-                        <a href="{{ url_for('student.application', app_id=a.id) }}"
-                           class="flex items-start gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-4 hover:bg-slate-50 transition">
-                            <span class="w-9 h-9 sm:w-10 sm:h-10 rounded-md bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
-                                <i class="fa-solid fa-file-lines"></i>
-                            </span>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                                    <p class="font-semibold text-slate-800 truncate text-sm">
-                                        {{ reg.title if reg else 'Application' }}
-                                    </p>
-                                    <span class="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded {{ status_styles.get(a.status, 'bg-slate-100 text-slate-700') }}">
-                                        {{ a.status }}
-                                    </span>
-                                </div>
-                                <p class="text-[11px] sm:text-xs text-slate-500 mt-0.5">
-                                    {{ a.level_label }} · {{ a.year_label }}
-                                    <span class="text-slate-300">·</span>
-                                    {{ a.created_at | ph_date }}
-                                </p>
-                                {% if a.notes %}
-                                    <p class="text-[11px] sm:text-xs text-slate-600 mt-1 line-clamp-2">
-                                        <i class="fa-regular fa-comment mr-1 text-slate-400"></i>
-                                        {{ a.notes }}
-                                    </p>
-                                {% endif %}
+    <div class="grid lg:grid-cols-3 gap-3 sm:gap-4">
+
+        {# ---------- Active application progress ---------- #}
+        <section class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-100 p-4 sm:p-5">
+            <header class="flex items-start justify-between gap-3 flex-wrap mb-3">
+                <div class="min-w-0">
+                    <h2 class="font-semibold text-base sm:text-lg">Active application</h2>
+                    {% if active_application %}
+                        <p class="text-xs text-slate-500 truncate">
+                            {{ active_application.registration.title if active_application.registration else 'Application' }}
+                        </p>
+                    {% else %}
+                        <p class="text-xs text-slate-500">No application started yet.</p>
+                    {% endif %}
+                </div>
+                {% if active_application %}
+                    <span class="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded {{ status_styles.get(active_application.status, 'bg-slate-100 text-slate-700') }}">
+                        {{ active_application.status }}
+                    </span>
+                {% endif %}
+            </header>
+
+            {% if active_application %}
+                <div class="mb-3">
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-1">
+                        <span>Requirements progress</span>
+                        <span class="font-semibold text-slate-700">{{ active_progress }}%</span>
+                    </div>
+                    <div class="h-2 rounded bg-slate-100 overflow-hidden">
+                        <div class="h-full bg-brand-400 transition-all"
+                             style="width: {{ active_progress }}%;"></div>
+                    </div>
+                </div>
+
+                {% if active_missing %}
+                    <p class="text-xs sm:text-sm text-slate-600 mb-2 font-medium">Still needed:</p>
+                    <ul class="text-xs sm:text-sm text-slate-700 space-y-1 mb-3">
+                        {% for label in active_missing %}
+                            <li class="flex items-center gap-2">
+                                <i class="fa-regular fa-circle text-slate-300"></i>
+                                {{ label }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="rounded-lg bg-green-50 border border-green-200 text-green-800 px-3 py-2 text-xs sm:text-sm mb-3">
+                        <i class="fa-solid fa-circle-check mr-1"></i>
+                        Kompleto na ang requirements. Pwede mo nang i-submit.
+                    </div>
+                {% endif %}
+
+                <div class="flex items-center gap-2 flex-wrap">
+                    <a href="{{ url_for('student.application', app_id=active_application.id) }}"
+                       class="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold">
+                        <i class="fa-solid fa-arrow-right"></i>
+                        Open application
+                    </a>
+                    <a href="{{ url_for('student.applications_list') }}"
+                       class="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-md bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm">
+                        See all applications
+                    </a>
+                </div>
+            {% else %}
+                <p class="text-xs sm:text-sm text-slate-500">
+                    {% if open_registration %}
+                        Tap <span class="font-semibold">Apply now</span> sa banner sa itaas para magsimula.
+                    {% else %}
+                        Maghintay ng susunod na registration window. Lalabas dito ang
+                        progress ng requirements pagkatapos mong mag-apply.
+                    {% endif %}
+                </p>
+            {% endif %}
+        </section>
+
+        {# ---------- My events ---------- #}
+        <section class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <header class="px-4 py-3 border-b flex items-center justify-between">
+                <h2 class="font-semibold text-sm">My events</h2>
+                <a href="{{ url_for('student.announcements') }}" class="text-xs text-brand-600 hover:underline">
+                    See all &rarr;
+                </a>
+            </header>
+            {% if joined_events %}
+                <ul class="divide-y divide-slate-100">
+                    {% for e in joined_events %}
+                        <li class="px-4 py-3">
+                            <div class="flex items-center gap-2 flex-wrap mb-1">
+                                <span class="text-[10px] uppercase px-2 py-0.5 rounded {{ category_styles.get(e.category, 'bg-slate-100 text-slate-700') }}">
+                                    {{ category_labels.get(e.category, 'Event') }}
+                                </span>
+                                <span class="text-[10px] uppercase px-2 py-0.5 rounded {{ status_styles.get(e.status, 'bg-slate-100 text-slate-700') }}">
+                                    {{ e.status }}
+                                </span>
                             </div>
-                            <i class="fa-solid fa-chevron-right text-slate-300 mt-1 text-xs"></i>
-                        </a>
+                            <p class="font-medium text-sm truncate">{{ e.title }}</p>
+                            {% if e.start_at and e.end_at %}
+                                <p class="text-[11px] text-slate-500 mt-0.5">
+                                    <i class="fa-regular fa-calendar mr-1"></i>
+                                    {{ e.start_at | ph_date }} → {{ e.end_at | ph_date }}
+                                </p>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="px-4 py-6 text-xs text-slate-500 text-center">
+                    Wala ka pang sinasaling event. Tingnan mo ang
+                    <a href="{{ url_for('student.announcements') }}"
+                       class="text-brand-600 hover:underline">announcements</a>.
+                </p>
+            {% endif %}
+        </section>
+    </div>
+
+    {# ---------- Latest announcements ---------- #}
+    <section class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <header class="px-4 py-3 border-b flex items-center justify-between">
+            <h2 class="font-semibold text-sm">Latest announcements</h2>
+            <a href="{{ url_for('student.announcements') }}" class="text-xs text-brand-600 hover:underline">
+                See all &rarr;
+            </a>
+        </header>
+        {% if announcements %}
+            <ul class="divide-y divide-slate-100">
+                {% for a in announcements %}
+                    <li class="px-4 py-3">
+                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                            <span class="text-[10px] uppercase px-2 py-0.5 rounded {{ category_styles.get(a.category, 'bg-slate-100 text-slate-700') }}">
+                                {{ category_labels.get(a.category, 'General') }}
+                            </span>
+                            {% if a.status != 'unscheduled' %}
+                                <span class="text-[10px] uppercase px-2 py-0.5 rounded {{ status_styles.get(a.status, 'bg-slate-100 text-slate-700') }}">
+                                    {{ a.status }}
+                                </span>
+                            {% endif %}
+                            {% if a.id in joined_ids %}
+                                <span class="text-[10px] uppercase px-2 py-0.5 rounded bg-green-100 text-green-800">
+                                    <i class="fa-solid fa-circle-check mr-0.5"></i> joined
+                                </span>
+                            {% endif %}
+                        </div>
+                        <p class="font-medium text-sm truncate">{{ a.title }}</p>
+                        <p class="text-[11px] sm:text-xs text-slate-500 line-clamp-2 mt-0.5">{{ a.body }}</p>
                     </li>
                 {% endfor %}
             </ul>
         {% else %}
-            <div class="px-4 py-8 text-center text-xs sm:text-sm text-slate-500">
-                <i class="fa-regular fa-folder-open text-2xl sm:text-3xl text-slate-300 mb-2 block"></i>
-                You don't have any applications yet.
-                {% if open_registration %}
-                    Tap <span class="font-semibold">Apply now</span> above to get started.
-                {% else %}
-                    Wait for the next registration window.
-                {% endif %}
-            </div>
+            <p class="px-4 py-6 text-xs text-slate-500 text-center">No announcements yet.</p>
         {% endif %}
     </section>
 </div>

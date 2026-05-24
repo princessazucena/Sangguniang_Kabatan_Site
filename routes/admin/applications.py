@@ -24,12 +24,12 @@ from ._common import (
 
 
 # ---------------------------------------------------------------------------
-# Dashboard list
+# Applications list (formerly the admin dashboard)
 # ---------------------------------------------------------------------------
 
-@admin_bp.route("/dashboard")
+@admin_bp.route("/applications")
 @admin_required
-def dashboard():
+def applications():
     sb = get_supabase()
 
     # Only show applications the student has fully submitted: education
@@ -51,7 +51,7 @@ def dashboard():
         for a in apps:
             counts[a["status"]] = counts.get(a["status"], 0) + 1
 
-    return render_template("admin/dashboard.html", applications=apps, counts=counts)
+    return render_template("admin/applications.html", applications=apps, counts=counts)
 
 
 # ---------------------------------------------------------------------------
@@ -65,14 +65,17 @@ def review(app_id: int):
     app_res = (
         sb.table("applications")
         .select("id, status, notes, created_at, reviewed_at, "
-                "student:profiles!applications_student_id_fkey(id, full_name)")
+                "education_level, year_level, "
+                "student:profiles!applications_student_id_fkey("
+                "id, full_name, first_name, middle_name, last_name, suffix, "
+                "facebook_url, created_at)")
         .eq("id", app_id)
         .single()
         .execute()
     )
     if not app_res.data:
         flash("Application not found.", "error")
-        return redirect(url_for("admin.dashboard"))
+        return redirect(url_for("admin.applications"))
 
     files = (
         sb.table("application_files")
@@ -85,7 +88,7 @@ def review(app_id: int):
     # Hide applications the student hasn't fully submitted yet.
     if app_id not in submitted_application_ids(sb, [app_id]):
         flash("This student has not completed their requirements yet.", "error")
-        return redirect(url_for("admin.dashboard"))
+        return redirect(url_for("admin.applications"))
 
     bucket = get_bucket_name()
     for f in files:
@@ -97,7 +100,25 @@ def review(app_id: int):
         except Exception:
             f["signed_url"] = None
 
-    return render_template("admin/review.html", app=app_res.data, files=files)
+    # Stitch the auth email onto the student profile so the admin sees
+    # the address the student logs in with.
+    app_data = app_res.data
+    student = app_data.get("student") or {}
+    if student.get("id"):
+        try:
+            user_res = sb.auth.admin.get_user_by_id(student["id"])
+            student["email"] = (
+                user_res.user.email if getattr(user_res, "user", None) else ""
+            ) or ""
+        except Exception:
+            student["email"] = ""
+        app_data["student"] = student
+
+    # Pretty labels for the level + year so the template stays readable.
+    app_data["level_label"] = LEVEL_LABELS.get(app_data.get("education_level"), "—")
+    app_data["year_label"]  = YEAR_LABELS.get(app_data.get("year_level"), "—")
+
+    return render_template("admin/review.html", app=app_data, files=files)
 
 
 @admin_bp.route("/applications/<int:app_id>/decision", methods=["POST"])

@@ -28,9 +28,10 @@ from services.announcements import annotate
 
 
 _CATEGORY_META = {
-    "registration": {"icon": "fa-clipboard-list",   "tone": "brand"},
-    "payout":       {"icon": "fa-hand-holding-dollar", "tone": "blue"},
-    "general":      {"icon": "fa-bullhorn",         "tone": "slate"},
+    "registration": {"icon": "fa-clipboard-list",     "tone": "brand"},
+    "payout":       {"icon": "fa-hand-holding-dollar","tone": "blue"},
+    "kk_assembly":  {"icon": "fa-people-group",       "tone": "purple"},
+    "general":      {"icon": "fa-bullhorn",           "tone": "slate"},
 }
 
 
@@ -106,7 +107,7 @@ def _student_status_item(sb, student_id: str) -> Optional[Dict[str, Any]]:
             "category":   "verified",
             "status":     "verified",
             "created_at": reviewed_at,
-            "endpoint":   "student.dashboard",
+            "endpoint":   "student.applications_list",
             "anchor":     None,
             "icon":       "fa-circle-check",
             "tone":       "green",
@@ -123,7 +124,7 @@ def _student_status_item(sb, student_id: str) -> Optional[Dict[str, Any]]:
         "category":   "rejected",
         "status":     "rejected",
         "created_at": reviewed_at,
-        "endpoint":   "student.dashboard",
+        "endpoint":   "student.applications_list",
         "anchor":     None,
         "icon":       "fa-circle-exclamation",
         "tone":       "red",
@@ -158,7 +159,7 @@ def _admin_pending_item(sb) -> Optional[Dict[str, Any]]:
         "category":   "pending",
         "status":     "pending",
         "created_at": latest_at,
-        "endpoint":   "admin.dashboard",
+        "endpoint":   "admin.applications",
         "anchor":     None,
         "icon":       "fa-folder-open",
         "tone":       "brand",

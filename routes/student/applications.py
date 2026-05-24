@@ -24,12 +24,12 @@ from ._common import (
 
 
 # ---------------------------------------------------------------------------
-# Dashboard list + apply action
+# Applications list (sidebar item "My applications")
 # ---------------------------------------------------------------------------
 
-@student_bp.route("/dashboard")
+@student_bp.route("/applications")
 @student_required
-def dashboard():
+def applications_list():
     sb = get_supabase()
     student_id = session["user_id"]
 
@@ -47,7 +47,7 @@ def dashboard():
         a["year_label"]  = YEAR_LABELS.get(a.get("year_level"), "—")
 
     return render_template(
-        "student/dashboard.html",
+        "student/applications.html",
         applications=applications,
         open_registration=open_registration,
         open_application=open_app,
@@ -64,7 +64,7 @@ def apply():
     open_reg = current_open_registration(sb)
     if not open_reg:
         flash("There is no open scholarship registration right now.", "error")
-        return redirect(url_for("student.dashboard"))
+        return redirect(url_for("student.applications_list"))
 
     # If they already applied for this window, route them to it.
     existing = (

@@ -163,6 +163,74 @@
         </div>
     </div>
 
+    {# Logout confirmation modal — shown whenever the user clicks any link
+       that points to the logout endpoint. #}
+    <div id="logout-modal"
+         class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4"
+         role="dialog" aria-modal="true" aria-labelledby="logout-title">
+        <div class="absolute inset-0 bg-slate-900/60" data-logout-cancel></div>
+        <div class="relative bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+            <div class="px-5 py-4 border-b flex items-center gap-3">
+                <span class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-red-100 text-red-600">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </span>
+                <h2 id="logout-title" class="text-base font-semibold text-slate-800">
+                    Log out
+                </h2>
+            </div>
+            <div class="px-5 py-4 text-sm text-slate-700">
+                Are you sure you want to log out?
+            </div>
+            <div class="px-5 py-3 bg-slate-50 border-t flex justify-end gap-2">
+                <button type="button" data-logout-cancel
+                        class="px-3 py-1.5 rounded-md text-sm font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-100">
+                    Cancel
+                </button>
+                <a id="logout-confirm-link" href="{{ url_for('public.logout') }}"
+                   class="px-3 py-1.5 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700">
+                    Log out
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {# Logout confirmation behavior — intercept clicks on any anchor whose
+       href matches the logout URL and show the confirmation modal first. #}
+    <script>
+    (function () {
+        const LOGOUT_URL = {{ url_for('public.logout') | tojson }};
+        const modal = document.getElementById('logout-modal');
+        if (!modal) return;
+
+        function open()  { modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); }
+        function close() { modal.classList.add('hidden');    document.body.classList.remove('overflow-hidden'); }
+
+        document.addEventListener('click', function (e) {
+            // Cancel buttons / backdrop
+            if (e.target.closest('[data-logout-cancel]')) {
+                e.preventDefault();
+                close();
+                return;
+            }
+            // Intercept any link to the logout URL (skip the confirm button itself)
+            const link = e.target.closest('a[href]');
+            if (!link) return;
+            if (link.id === 'logout-confirm-link') return;
+            try {
+                const url = new URL(link.href, window.location.origin);
+                if (url.pathname === LOGOUT_URL) {
+                    e.preventDefault();
+                    open();
+                }
+            } catch (_) { /* ignore malformed URLs */ }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !modal.classList.contains('hidden')) close();
+        });
+    })();
+    </script>
+
     {# Global password show/hide toggle. Any button with [data-password-toggle]
        toggles the type of the input it sits next to inside .password-field. #}
     <script>
