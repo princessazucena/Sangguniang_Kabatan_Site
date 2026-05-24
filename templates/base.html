@@ -4,12 +4,19 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}Sangguniang Kabataan ng Bukal Scholarship Portal{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // Brand palette built from the logo green (#84B179).
         tailwind.config = {
             theme: {
                 extend: {
+                    fontFamily: {
+                        sans: ['Poppins', 'system-ui', '-apple-system', 'BlinkMacSystemFont',
+                               '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+                    },
                     colors: {
                         brand: {
                             50:  '#f1f7ef',
@@ -23,6 +30,10 @@
                             800: '#365031',
                             900: '#283b25',
                         }
+                    },
+                    boxShadow: {
+                        card: '0 6px 18px -8px rgba(40, 59, 37, 0.18), 0 2px 6px -2px rgba(40, 59, 37, 0.10)',
+                        'card-lg': '0 18px 40px -16px rgba(40, 59, 37, 0.30), 0 6px 14px -6px rgba(40, 59, 37, 0.18)',
                     }
                 }
             }
@@ -33,9 +44,9 @@
           referrerpolicy="no-referrer" />
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-800 overflow-x-hidden {% block body_class %}{% endblock %}">
-    <header class="bg-white shadow-sm border-b-4 border-brand-400">
+    <header class="bg-white shadow-sm border-b-4 border-brand-400 sticky top-0 z-40">
         <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-            <a href="{{ url_for('public.home') }}" class="flex items-center gap-2">
+            <a href="{% if session.get('role') == 'student' %}{{ url_for('student.announcements') }}{% elif session.get('role') == 'admin' %}{{ url_for('admin.dashboard') }}{% else %}{{ url_for('public.home') }}{% endif %}" class="flex items-center gap-2">
                 <img src="{{ url_for('static', filename='images/411138383_122115055322131251_5783589540994116709_n.jpg') }}"
                      alt="Logo" class="h-9 w-auto rounded-md object-cover" />
                 <span class="font-semibold text-lg text-brand-700 leading-tight">Sangguniang Kabataan ng Bukal<br/><span class="text-sm font-medium text-brand-600">Scholarship Portal</span></span>

@@ -40,16 +40,91 @@
 {% endblock %}
 
 {% block content %}
+{% set status_styles = {
+    'open':        'bg-green-100 text-green-800',
+    'upcoming':    'bg-amber-100 text-amber-800',
+    'closed':      'bg-slate-200 text-slate-700',
+    'unscheduled': 'bg-slate-100 text-slate-600',
+} %}
+{% set category_labels = {
+    'registration': 'Scholarship Registration',
+    'payout':       'Scholarship Pay Out',
+    'general':      'General',
+} %}
+{% set category_styles = {
+    'registration': 'bg-brand-50 text-brand-700',
+    'payout':       'bg-blue-50 text-blue-700',
+    'general':      'bg-slate-100 text-slate-700',
+} %}
+
 <h2 class="text-xl font-semibold mb-4 text-brand-700">Latest announcements</h2>
 {% if announcements %}
     <div class="space-y-4">
         {% for a in announcements %}
             <article class="bg-white rounded-lg shadow-sm p-5 border border-slate-100">
-                <div class="flex items-center justify-between">
-                    <h3 class="font-semibold text-lg">{{ a.title }}</h3>
-                    <time class="text-xs text-slate-500">{{ a.created_at[:10] }}</time>
+                <div class="flex items-start justify-between gap-3 flex-wrap">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                            <span class="text-xs px-2 py-0.5 rounded {{ category_styles.get(a.category, 'bg-slate-100 text-slate-700') }}">
+                                {{ category_labels.get(a.category, 'General') }}
+                            </span>
+                            {% if a.status != 'unscheduled' %}
+                                <span class="text-xs uppercase px-2 py-0.5 rounded {{ status_styles.get(a.status, 'bg-slate-100 text-slate-700') }}">
+                                    {{ a.status }}
+                                </span>
+                            {% endif %}
+                        </div>
+                        <h3 class="font-semibold text-lg">{{ a.title }}</h3>
+                    </div>
+                    <time class="text-xs text-slate-500 whitespace-nowrap">{{ a.created_at[:10] }}</time>
                 </div>
+                {% if a.start_at and a.end_at %}
+                    <p class="text-xs text-slate-500 mt-1">
+                        <i class="fa-regular fa-calendar mr-1"></i>
+                        {{ a.start_at[:16] | replace('T', ' ') }} → {{ a.end_at[:16] | replace('T', ' ') }}
+                    </p>
+                {% endif %}
                 <p class="mt-2 text-slate-700 whitespace-pre-line">{{ a.body }}</p>
+
+                {% if a.category == 'registration' %}
+                    <div class="mt-3">
+                        {% if a.status == 'open' %}
+                            <a href="{{ url_for('public.login', next=url_for('student.dashboard')) }}"
+                               class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium">
+                                <i class="fa-solid fa-paper-plane"></i> Apply now
+                            </a>
+                        {% elif a.status == 'upcoming' %}
+                            <button type="button" disabled
+                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-200 text-slate-500 text-sm font-medium cursor-not-allowed">
+                                <i class="fa-regular fa-clock"></i> Opens {{ a.start_at[:10] }}
+                            </button>
+                        {% else %}
+                            <button type="button" disabled
+                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-200 text-slate-500 text-sm font-medium cursor-not-allowed">
+                                <i class="fa-solid fa-lock"></i> Registration closed
+                            </button>
+                        {% endif %}
+                    </div>
+                {% elif a.category == 'payout' %}
+                    <div class="mt-3">
+                        {% if a.status == 'open' %}
+                            <a href="{{ url_for('public.login', next=url_for('student.announcements')) }}"
+                               class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium">
+                                <i class="fa-solid fa-handshake"></i> Log in to join
+                            </a>
+                        {% elif a.status == 'upcoming' %}
+                            <button type="button" disabled
+                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-200 text-slate-500 text-sm font-medium cursor-not-allowed">
+                                <i class="fa-regular fa-clock"></i> Opens {{ a.start_at[:10] }}
+                            </button>
+                        {% else %}
+                            <button type="button" disabled
+                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-200 text-slate-500 text-sm font-medium cursor-not-allowed">
+                                <i class="fa-solid fa-lock"></i> Pay-out closed
+                            </button>
+                        {% endif %}
+                    </div>
+                {% endif %}
             </article>
         {% endfor %}
     </div>

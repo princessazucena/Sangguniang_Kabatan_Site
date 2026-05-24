@@ -1,5 +1,5 @@
 """
-Student routes: dashboard, level selection, per-requirement uploads.
+Student routes: dashboard, announcements, level selection, per-requirement uploads.
 """
 import uuid
 from functools import wraps
@@ -10,6 +10,9 @@ from flask import (
 )
 
 from supabase_client import get_supabase, get_bucket_name
+from services.announcements import (
+    annotate, current_open_registration, schedule_status,
+)
 
 student_bp = Blueprint("student", __name__)
 
@@ -106,12 +109,76 @@ def _files_by_slot(files: list[dict]) -> dict[str, dict]:
 # Routes
 # ---------------------------------------------------------------------------
 
+@student_bp.route("/announcements")
+@student_required
+def announcements():
+    sb = get_supabase()
+    items = (
+        sb.table("announcements")
+        .select("*")
+        .order("created_at", desc=True)
+        .limit(50)
+        .execute()
+    ).data or []
+    annotate(items)
+
+    student_id = session["user_id"]
+    joined_ids = set()
+    payout_ids = [a["id"] for a in items if a.get("category") == "payout"]
+    if payout_ids:
+        rows = (
+            sb.table("announcement_joins")
+            .select("announcement_id")
+            .eq("student_id", student_id)
+            .in_("announcement_id", payout_ids)
+            .execute()
+        ).data or []
+        joined_ids = {r["announcement_id"] for r in rows}
+
+    return render_template(
+        "student/announcements.html",
+        announcements=items,
+        joined_ids=joined_ids,
+    )
+
+
+@student_bp.route("/announcements/<int:anc_id>/join", methods=["POST"])
+@student_required
+def join_payout(anc_id: int):
+    sb = get_supabase()
+    anc = (
+        sb.table("announcements").select("*").eq("id", anc_id).single().execute()
+    ).data
+    if not anc or anc.get("category") != "payout":
+        flash("That announcement does not accept joiners.", "error")
+        return redirect(url_for("student.announcements"))
+
+    if schedule_status(anc) != "open":
+        flash("Hindi pa o tapos na ang join window para sa announcement na ito.", "error")
+        return redirect(url_for("student.announcements"))
+
+    student_id = session["user_id"]
+    try:
+        sb.table("announcement_joins").insert({
+            "announcement_id": anc_id,
+            "student_id":      student_id,
+        }).execute()
+        flash("You're on the list. Check announcements again on the payout date.", "success")
+    except Exception:
+        # likely a duplicate (unique constraint) — treat as success.
+        flash("You already joined this pay-out.", "success")
+
+    return redirect(url_for("student.announcements"))
+
+
 @student_bp.route("/dashboard")
 @student_required
 def dashboard():
     sb = get_supabase()
     student_id = session["user_id"]
     app_row = _get_or_create_application(sb, student_id)
+
+    open_registration = current_open_registration(sb)
 
     # Level not picked yet — show selection screen first.
     if not app_row.get("education_level") or not app_row.get("year_level"):
@@ -120,6 +187,7 @@ def dashboard():
             application=app_row,
             year_options=YEAR_OPTIONS,
             level_labels=LEVEL_LABELS,
+            open_registration=open_registration,
         )
 
     files = (
@@ -148,6 +216,7 @@ def dashboard():
         slots=slots,
         level_label=LEVEL_LABELS.get(level, level),
         year_label=YEAR_LABELS.get(app_row.get("year_level"), ""),
+        open_registration=open_registration,
     )
 
 
@@ -192,48 +261,24 @@ def reset_level():
     return redirect(url_for("student.dashboard"))
 
 
-@student_bp.route("/upload/<slot>", methods=["POST"])
-@student_required
-def upload(slot: str):
-    if slot not in REQUIREMENT_SLOTS:
-        flash("Unknown requirement.", "error")
-        return redirect(url_for("student.dashboard"))
-
-    sb = get_supabase()
-    student_id = session["user_id"]
-    app_row = _get_or_create_application(sb, student_id)
-
-    level = app_row.get("education_level")
-    if not level:
-        flash("Please choose your education level first.", "error")
-        return redirect(url_for("student.dashboard"))
-
-    if level not in REQUIREMENT_SLOTS[slot]["levels"]:
-        flash("That requirement does not apply to your level.", "error")
-        return redirect(url_for("student.dashboard"))
-
-    f = request.files.get("document")
-    if not f or not f.filename:
-        flash("Please choose a file to upload.", "error")
-        return redirect(url_for("student.dashboard"))
-
-    kind = REQUIREMENT_SLOTS[slot]["kind"]
-    mime = (f.mimetype or "").lower()
+def _upload_one(sb, app_row, student_id, slot, file_storage):
+    """Validate & store a single file; returns (ok, message)."""
+    kind  = REQUIREMENT_SLOTS[slot]["kind"]
     label = REQUIREMENT_SLOTS[slot]["label"]
+    mime  = (file_storage.mimetype or "").lower()
 
     if kind == "pdf" and mime not in PDF_MIMES:
-        flash(f"{label} must be a PDF file.", "error")
-        return redirect(url_for("student.dashboard"))
+        return False, f"{label} must be a PDF file."
     if kind == "image" and mime not in IMAGE_MIMES:
-        flash(f"{label} must be an image (JPG, PNG, or HEIC).", "error")
-        return redirect(url_for("student.dashboard"))
+        return False, f"{label} must be an image (JPG, PNG, or HEIC)."
 
-    data = f.read()
+    data = file_storage.read()
+    if not data:
+        return False, f"{label} is empty."
     if len(data) > MAX_UPLOAD_BYTES:
-        flash("File is too large (max 10 MB).", "error")
-        return redirect(url_for("student.dashboard"))
+        return False, f"{label} is too large (max 10 MB)."
 
-    safe_name = f.filename.replace("/", "_").replace("\\", "_")
+    safe_name = file_storage.filename.replace("/", "_").replace("\\", "_")
     storage_path = f"{student_id}/{slot}/{uuid.uuid4().hex}_{safe_name}"
 
     bucket = get_bucket_name()
@@ -247,8 +292,7 @@ def upload(slot: str):
             },
         )
     except Exception as exc:
-        flash(f"Upload failed: {exc}", "error")
-        return redirect(url_for("student.dashboard"))
+        return False, f"{label} upload failed: {exc}"
 
     sb.table("application_files").insert({
         "application_id": app_row["id"],
@@ -259,14 +303,108 @@ def upload(slot: str):
         "mime_type":      mime,
         "size_bytes":     len(data),
     }).execute()
+    return True, label
 
-    # Re-open the application for review after a new upload.
-    if app_row["status"] != "pending":
-        sb.table("applications").update({
-            "status": "pending",
-            "reviewed_by": None,
-            "reviewed_at": None,
-        }).eq("id", app_row["id"]).execute()
 
-    flash(f"{label} uploaded.", "success")
+@student_bp.route("/submit", methods=["POST"])
+@student_required
+def submit_requirements():
+    """
+    Single-button submission: process every slot input present in the form
+    and save them in one go.
+    """
+    sb = get_supabase()
+    student_id = session["user_id"]
+    app_row = _get_or_create_application(sb, student_id)
+
+    if not current_open_registration(sb):
+        flash("Sarado pa o tapos na ang scholarship registration window. "
+              "Hindi ka pwedeng mag-submit ng requirements ngayon.", "error")
+        return redirect(url_for("student.dashboard"))
+
+    level = app_row.get("education_level")
+    if not level:
+        flash("Please choose your education level first.", "error")
+        return redirect(url_for("student.dashboard"))
+
+    saved, errors = [], []
+    for slot in LEVEL_SLOTS[level]:
+        f = request.files.get(f"document_{slot}")
+        if not f or not f.filename:
+            continue
+        ok, msg = _upload_one(sb, app_row, student_id, slot, f)
+        (saved if ok else errors).append(msg)
+
+    if not saved and not errors:
+        flash("Walang napiling file. Pumili muna ng dokumentong i-uupload.", "error")
+        return redirect(url_for("student.dashboard"))
+
+    if saved:
+        # Re-open the application for review after fresh uploads.
+        if app_row["status"] != "pending":
+            sb.table("applications").update({
+                "status": "pending",
+                "reviewed_by": None,
+                "reviewed_at": None,
+            }).eq("id", app_row["id"]).execute()
+        flash(f"Saved: {', '.join(saved)}.", "success")
+    for err in errors:
+        flash(err, "error")
+
     return redirect(url_for("student.dashboard"))
+
+
+@student_bp.route("/profile")
+@student_required
+def profile():
+    sb = get_supabase()
+    student_id = session["user_id"]
+
+    prof = (
+        sb.table("profiles")
+        .select("first_name, middle_name, last_name, suffix, full_name, "
+                "facebook_url, role, created_at")
+        .eq("id", student_id)
+        .single()
+        .execute()
+    ).data or {}
+
+    # Pull the auth email so we can show it on the profile.
+    try:
+        user_res = sb.auth.admin.get_user_by_id(student_id)
+        email = (user_res.user.email if getattr(user_res, "user", None) else None) or ""
+    except Exception:
+        email = ""
+
+    app_row = _get_or_create_application(sb, student_id)
+    files = (
+        sb.table("application_files")
+        .select("*")
+        .eq("application_id", app_row["id"])
+        .order("uploaded_at", desc=True)
+        .execute()
+    ).data or []
+
+    by_slot = _files_by_slot(files)
+    level   = app_row.get("education_level")
+    slots   = []
+    if level:
+        slots = [
+            {
+                "key":   key,
+                "label": REQUIREMENT_SLOTS[key]["label"],
+                "kind":  REQUIREMENT_SLOTS[key]["kind"],
+                "file":  by_slot.get(key),
+            }
+            for key in LEVEL_SLOTS[level]
+        ]
+
+    return render_template(
+        "student/profile.html",
+        profile=prof,
+        email=email,
+        application=app_row,
+        slots=slots,
+        level_label=LEVEL_LABELS.get(level, "—") if level else "—",
+        year_label=YEAR_LABELS.get(app_row.get("year_level"), "—"),
+    )

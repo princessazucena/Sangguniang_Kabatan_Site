@@ -7,12 +7,20 @@
     'rejected': 'bg-red-100 text-red-800',
 } %}
 
+{% set slot_labels = {
+    'card':      'Report Card',
+    'cor':       'Certificate of Registration (COR)',
+    'id':        'Valid School ID',
+    'indigency': 'Certificate of Indigency',
+    'psa':       'PSA Birth Certificate',
+} %}
+
 {% block admin_content %}
 <a href="{{ url_for('admin.dashboard') }}" class="text-sm text-brand-600 hover:underline">&larr; All applications</a>
 
 <div class="grid md:grid-cols-3 gap-6 mt-2">
     <section class="md:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-slate-100">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between flex-wrap gap-2">
             <h1 class="text-2xl font-bold">
                 {{ app.student.full_name if app.student else 'Unknown student' }}
             </h1>
@@ -22,27 +30,48 @@
         </div>
         <p class="text-sm text-slate-500 mt-1">Submitted {{ app.created_at[:10] }}</p>
 
-        <h2 class="font-semibold mt-5 mb-2">Uploaded documents</h2>
+        <div class="mt-5 flex items-center justify-between gap-2 flex-wrap">
+            <h2 class="font-semibold">Uploaded documents</h2>
+            {% if files %}
+                <a href="{{ url_for('admin.print_packet', app_id=app.id) }}"
+                   target="_blank"
+                   class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium">
+                    <i class="fa-solid fa-print"></i>
+                    Print all documents
+                </a>
+            {% endif %}
+        </div>
+
         {% if files %}
-            <ul class="divide-y divide-slate-100">
+            <ul class="divide-y divide-slate-100 mt-2">
                 {% for f in files %}
-                    <li class="py-2 flex items-center justify-between text-sm">
-                        <span class="truncate">{{ f.file_name }}</span>
-                        {% if f.signed_url %}
-                            <a href="{{ f.signed_url }}" target="_blank"
-                               class="text-brand-600 hover:underline">Open</a>
-                        {% else %}
-                            <span class="text-slate-400">link unavailable</span>
-                        {% endif %}
+                    {% set is_image = (f.mime_type or '').startswith('image/') %}
+                    <li class="py-2 flex items-center justify-between gap-3 text-sm">
+                        <div class="min-w-0 flex items-center gap-2">
+                            <i class="fa-solid {{ 'fa-image text-blue-500' if is_image else 'fa-file-pdf text-red-500' }}"></i>
+                            <div class="min-w-0">
+                                <p class="font-medium truncate">{{ slot_labels.get(f.slot, f.slot or 'Document') }}</p>
+                                <p class="text-xs text-slate-500 truncate">{{ f.file_name }}</p>
+                            </div>
+                        </div>
+                        <button type="button"
+                                class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-medium"
+                                data-doc-open
+                                data-doc-url="{{ url_for('admin.view_file', app_id=app.id, file_id=f.id) }}"
+                                data-doc-kind="{{ 'image' if is_image else 'pdf' }}"
+                                data-doc-title="{{ slot_labels.get(f.slot, f.slot or 'Document') }} — {{ f.file_name }}">
+                            <i class="fa-solid fa-eye"></i>
+                            View
+                        </button>
                     </li>
                 {% endfor %}
             </ul>
         {% else %}
-            <p class="text-sm text-slate-500">No documents uploaded.</p>
+            <p class="text-sm text-slate-500 mt-2">No documents uploaded.</p>
         {% endif %}
     </section>
 
-    <aside class="bg-white rounded-xl shadow-sm p-6 border border-slate-100">
+    <aside class="bg-white rounded-xl shadow-sm p-6 border border-slate-100 h-fit">
         <h2 class="font-semibold mb-3">Decision</h2>
         <form method="post" action="{{ url_for('admin.decide', app_id=app.id) }}" class="space-y-3">
             <textarea name="notes" rows="4"
@@ -51,14 +80,86 @@
             <div class="flex gap-2">
                 <button name="decision" value="verified"
                         class="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm py-2 rounded-md">
-                    Verify
+                    <i class="fa-solid fa-check mr-1"></i> Verify
                 </button>
                 <button name="decision" value="rejected"
                         class="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm py-2 rounded-md">
-                    Reject
+                    <i class="fa-solid fa-xmark mr-1"></i> Reject
                 </button>
             </div>
         </form>
     </aside>
 </div>
+
+{# ===== Document preview modal ===== #}
+<div id="doc-modal"
+     class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4"
+     role="dialog" aria-modal="true" aria-labelledby="doc-modal-title">
+    <div class="absolute inset-0 bg-slate-900/70" data-doc-close></div>
+    <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-3 border-b">
+            <h2 id="doc-modal-title" class="text-sm font-semibold text-slate-700 truncate"></h2>
+            <div class="flex items-center gap-2">
+                <a id="doc-modal-newtab" href="#" target="_blank"
+                   class="text-xs text-brand-600 hover:underline">Open in new tab</a>
+                <button type="button" data-doc-close
+                        class="text-slate-400 hover:text-slate-600" aria-label="Close">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+        </div>
+        <div class="flex-1 bg-slate-100 overflow-auto flex items-center justify-center">
+            <iframe id="doc-modal-iframe" class="hidden w-full h-full bg-white" src="about:blank"></iframe>
+            <img    id="doc-modal-image"  class="hidden max-w-full max-h-full object-contain" alt="" src="" />
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const modal  = document.getElementById('doc-modal');
+    const title  = document.getElementById('doc-modal-title');
+    const iframe = document.getElementById('doc-modal-iframe');
+    const image  = document.getElementById('doc-modal-image');
+    const newtab = document.getElementById('doc-modal-newtab');
+    if (!modal) return;
+
+    function open(url, kind, label) {
+        title.textContent = label || 'Document';
+        newtab.href = url;
+        if (kind === 'image') {
+            iframe.classList.add('hidden');
+            iframe.src = 'about:blank';
+            image.src  = url;
+            image.classList.remove('hidden');
+        } else {
+            image.classList.add('hidden');
+            image.src = '';
+            iframe.src = url;
+            iframe.classList.remove('hidden');
+        }
+        modal.classList.remove('hidden');
+    }
+    function close() {
+        modal.classList.add('hidden');
+        iframe.src = 'about:blank';
+        image.src  = '';
+    }
+
+    document.addEventListener('click', function (e) {
+        const opener = e.target.closest('[data-doc-open]');
+        if (opener) {
+            e.preventDefault();
+            open(opener.dataset.docUrl, opener.dataset.docKind, opener.dataset.docTitle);
+            return;
+        }
+        if (e.target.closest('[data-doc-close]')) {
+            close();
+        }
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') close();
+    });
+})();
+</script>
 {% endblock %}

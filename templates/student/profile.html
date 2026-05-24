@@ -1,0 +1,154 @@
+{% extends "student/_layout.html" %}
+{% block title %}My Profile · Sangguniang Kabataan ng Bukal Scholarship Portal{% endblock %}
+
+{% set status_styles = {
+    'pending':  'bg-amber-100 text-amber-800',
+    'verified': 'bg-green-100 text-green-800',
+    'rejected': 'bg-red-100 text-red-800',
+} %}
+
+{% block student_content %}
+<div class="space-y-6 max-w-3xl">
+
+    {# Header card #}
+    <section class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center gap-4">
+        <div class="w-14 h-14 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xl font-bold">
+            {{ (profile.first_name or '?')[:1] | upper }}{{ (profile.last_name or '')[:1] | upper }}
+        </div>
+        <div class="min-w-0">
+            <h1 class="text-2xl font-bold truncate">{{ profile.full_name or 'My profile' }}</h1>
+            <p class="text-sm text-slate-500 capitalize">{{ profile.role or 'student' }}</p>
+        </div>
+    </section>
+
+    {# Personal information — name fields are read-only #}
+    <section class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+        <header class="mb-4">
+            <h2 class="font-semibold text-lg">Personal information</h2>
+            <p class="text-xs text-slate-500">Ang mga pangalan ay hindi na pwedeng baguhin pagkatapos mag-sign up.</p>
+        </header>
+
+        <div class="grid sm:grid-cols-2 gap-4 text-sm">
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">First name</label>
+                <input type="text" value="{{ profile.first_name or '' }}" readonly
+                       class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Middle name</label>
+                <input type="text" value="{{ profile.middle_name or '—' }}" readonly
+                       class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Last name</label>
+                <input type="text" value="{{ profile.last_name or '' }}" readonly
+                       class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Suffix</label>
+                <input type="text" value="{{ profile.suffix or '—' }}" readonly
+                       class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+            </div>
+        </div>
+    </section>
+
+    {# Contact #}
+    <section class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+        <header class="mb-4">
+            <h2 class="font-semibold text-lg">Contact</h2>
+        </header>
+        <div class="grid sm:grid-cols-2 gap-4 text-sm">
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Email</label>
+                <input type="text" value="{{ email or '—' }}" readonly
+                       class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Facebook</label>
+                {% if profile.facebook_url %}
+                    <a href="{{ profile.facebook_url }}" target="_blank" rel="noopener"
+                       class="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-brand-700 hover:underline w-full truncate">
+                        <i class="fa-brands fa-facebook"></i>
+                        <span class="truncate">{{ profile.facebook_url }}</span>
+                    </a>
+                {% else %}
+                    <input type="text" value="—" readonly
+                           class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    {# Application details #}
+    <section class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+        <header class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <h2 class="font-semibold text-lg">Application details</h2>
+            <span class="text-xs uppercase tracking-wide px-2 py-1 rounded {{ status_styles.get(application.status, 'bg-slate-100 text-slate-700') }}">
+                {{ application.status }}
+            </span>
+        </header>
+        <div class="grid sm:grid-cols-2 gap-4 text-sm">
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Education level</label>
+                <input type="text" value="{{ level_label }}" readonly
+                       class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Year level</label>
+                <input type="text" value="{{ year_label }}" readonly
+                       class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+            </div>
+            <div class="sm:col-span-2">
+                <label class="block text-xs font-medium text-slate-500 mb-1">Submitted</label>
+                <input type="text" value="{{ application.created_at[:10] if application.created_at else '—' }}" readonly
+                       class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+            </div>
+            {% if application.notes %}
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Reviewer notes</label>
+                    <textarea readonly rows="3"
+                              class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">{{ application.notes }}</textarea>
+                </div>
+            {% endif %}
+        </div>
+    </section>
+
+    {# Uploaded documents #}
+    <section class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+        <header class="mb-4 flex items-center justify-between">
+            <h2 class="font-semibold text-lg">Uploaded documents</h2>
+            <a href="{{ url_for('student.dashboard') }}"
+               class="text-sm text-brand-600 hover:underline">Manage uploads &rarr;</a>
+        </header>
+
+        {% if slots %}
+            <ul class="divide-y divide-slate-100">
+                {% for s in slots %}
+                    <li class="py-3 flex items-start gap-3">
+                        <span class="w-9 h-9 rounded-md bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
+                            <i class="fa-solid {{ 'fa-id-card' if s.kind == 'image' else 'fa-file-pdf' }}"></i>
+                        </span>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-medium text-sm">{{ s.label }}</p>
+                            {% if s.file %}
+                                <p class="text-xs text-slate-600 truncate">
+                                    {{ s.file.file_name }}
+                                    <span class="text-slate-400">· {{ (s.file.size_bytes or 0) // 1024 }} KB · {{ s.file.uploaded_at[:10] }}</span>
+                                </p>
+                            {% else %}
+                                <p class="text-xs text-slate-500">Wala pang na-upload.</p>
+                            {% endif %}
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded shrink-0
+                                     {% if s.file %}bg-green-100 text-green-800{% else %}bg-slate-100 text-slate-600{% endif %}">
+                            {% if s.file %}Uploaded{% else %}Missing{% endif %}
+                        </span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-sm text-slate-500">Pumili muna ng education level upang makita ang requirements.</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

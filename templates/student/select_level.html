@@ -2,6 +2,15 @@
 {% block title %}Choose your level · Sangguniang Kabataan ng Bukal Scholarship Portal{% endblock %}
 
 {% block student_content %}
+{% if not open_registration %}
+    <div class="mb-4 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-sm flex items-start gap-3">
+        <i class="fa-solid fa-lock mt-0.5"></i>
+        <div>
+            <p class="font-semibold">Sarado pa o tapos na ang scholarship registration.</p>
+            <p>Maaari mong i-set ang iyong level pero hindi ka pa pwedeng mag-submit hangga't hindi pa bukas ang registration window.</p>
+        </div>
+    </div>
+{% endif %}
 <section class="bg-white rounded-xl shadow-sm p-6 border border-slate-100 max-w-2xl">
     <h1 class="text-2xl font-bold mb-1">Tell us about your studies</h1>
     <p class="text-sm text-slate-500 mb-5">

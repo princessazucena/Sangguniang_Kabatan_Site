@@ -1,2 +1,107 @@
-/* Project-specific tweaks layered on top of Tailwind. */
+/* ============================================================
+   Project-specific tweaks layered on top of Tailwind.
+   ------------------------------------------------------------
+   The goal here is to make tables, containers, and cards stand
+   out at a glance — heavier shadows, slightly warmer canvas,
+   and a subtle brand-tinted border so blocks are crisp on the
+   light slate-50 page background.
+   ============================================================ */
+
 html { scroll-behavior: smooth; }
+
+/* Apply Poppins everywhere, even on form controls (where the
+   browser default would otherwise win). */
+body, button, input, textarea, select {
+    font-family: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont,
+                 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Warmer page canvas so white cards pop. Tailwind's bg-slate-50
+   is a hair too cool against our brand green. */
+body { background-color: #f3f5f1; }
+
+/* ----- Cards / containers -----------------------------------
+   Anything Tailwind classed `.bg-white.rounded-xl` is treated as
+   a "container" we want the user to notice immediately. We push
+   the shadow harder than Tailwind's shadow-sm, add a thin slate
+   border, and lift the card a touch on hover for tactile feel.
+   Cards already using `shadow-card` or `shadow-card-lg` keep
+   their explicit values. */
+.bg-white.rounded-xl,
+.bg-white.rounded-lg {
+    box-shadow:
+        0 6px 18px -8px rgba(40, 59, 37, 0.18),
+        0 2px 6px -2px rgba(40, 59, 37, 0.10);
+    border-color: #e2e8f0;
+}
+
+/* Boost shadow on hover for clickable-feeling articles. */
+article.bg-white.rounded-lg {
+    transition: box-shadow 200ms ease, transform 200ms ease;
+}
+article.bg-white.rounded-lg:hover {
+    box-shadow:
+        0 12px 28px -12px rgba(40, 59, 37, 0.25),
+        0 4px 10px -4px rgba(40, 59, 37, 0.14);
+    transform: translateY(-1px);
+}
+
+/* ----- Sidebar inner panel ---------------------------------- */
+aside .md\:bg-white.md\:rounded-xl {
+    box-shadow:
+        0 8px 22px -10px rgba(40, 59, 37, 0.20),
+        0 2px 6px -2px rgba(40, 59, 37, 0.08);
+}
+
+/* ----- Tables ------------------------------------------------
+   Make tables feel like a polished panel: rounded corners on
+   the wrapper, a thin slate frame, sticky-feeling header row. */
+section > table,
+section > div > table,
+.overflow-x-auto > table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+
+table thead {
+    background-color: #f1f5f9;            /* slate-100 */
+    color: #475569;                       /* slate-600 */
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+}
+
+table thead th {
+    border-bottom: 1px solid #e2e8f0;
+}
+
+table tbody tr {
+    transition: background-color 120ms ease;
+}
+table tbody tr:hover {
+    background-color: #f8fafc;            /* slate-50 */
+}
+
+/* ----- Form controls -----------------------------------------
+   Slightly stronger borders so inputs read as inputs at a
+   glance, with a clearer focus ring. */
+input:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+    border-color: #cbd5e1;                /* slate-300 */
+}
+
+input:focus, select:focus, textarea:focus {
+    box-shadow: 0 0 0 3px rgba(132, 177, 121, 0.30);
+}
+
+/* Read-only inputs keep their muted look (used on profile page). */
+input[readonly], textarea[readonly] {
+    background-color: #f8fafc;
+    color: #334155;
+}
+
+/* ----- Headings ---------------------------------------------- */
+h1, h2, h3, h4 { letter-spacing: -0.01em; }

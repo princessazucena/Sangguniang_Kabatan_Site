@@ -1,0 +1,110 @@
+{% extends "student/_layout.html" %}
+{% block title %}Announcements · Sangguniang Kabataan ng Bukal Scholarship Portal{% endblock %}
+
+{% set status_styles = {
+    'open':        'bg-green-100 text-green-800',
+    'upcoming':    'bg-amber-100 text-amber-800',
+    'closed':      'bg-slate-200 text-slate-700',
+    'unscheduled': 'bg-slate-100 text-slate-600',
+} %}
+{% set category_labels = {
+    'registration': 'Scholarship Registration',
+    'payout':       'Scholarship Pay Out',
+    'general':      'General',
+} %}
+{% set category_styles = {
+    'registration': 'bg-brand-50 text-brand-700',
+    'payout':       'bg-blue-50 text-blue-700',
+    'general':      'bg-slate-100 text-slate-700',
+} %}
+
+{% block student_content %}
+<div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+    <div class="flex items-center gap-2 mb-4">
+        <i class="fa-solid fa-bullhorn text-brand-600"></i>
+        <h1 class="text-xl font-bold text-brand-700">Announcements</h1>
+    </div>
+
+    {% if announcements %}
+        <div class="space-y-4">
+            {% for a in announcements %}
+                <article class="border border-slate-100 rounded-lg p-4 hover:bg-slate-50 transition">
+                    <div class="flex items-start justify-between gap-3 flex-wrap">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap mb-1">
+                                <span class="text-xs px-2 py-0.5 rounded {{ category_styles.get(a.category, 'bg-slate-100 text-slate-700') }}">
+                                    {{ category_labels.get(a.category, 'General') }}
+                                </span>
+                                {% if a.status != 'unscheduled' %}
+                                    <span class="text-xs uppercase px-2 py-0.5 rounded {{ status_styles.get(a.status, 'bg-slate-100 text-slate-700') }}">
+                                        {{ a.status }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <h2 class="font-semibold text-slate-800">{{ a.title }}</h2>
+                        </div>
+                        <time class="text-xs text-slate-500 whitespace-nowrap">{{ a.created_at[:10] }}</time>
+                    </div>
+                    {% if a.start_at and a.end_at %}
+                        <p class="text-xs text-slate-500 mt-1">
+                            <i class="fa-regular fa-calendar mr-1"></i>
+                            {{ a.start_at[:16] | replace('T', ' ') }} → {{ a.end_at[:16] | replace('T', ' ') }}
+                        </p>
+                    {% endif %}
+                    <p class="mt-2 text-sm text-slate-700 whitespace-pre-line leading-relaxed">{{ a.body }}</p>
+
+                    {% if a.category == 'registration' %}
+                        <div class="mt-3">
+                            {% if a.status == 'open' %}
+                                <a href="{{ url_for('student.dashboard') }}"
+                                   class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium">
+                                    <i class="fa-solid fa-paper-plane"></i> Apply now
+                                </a>
+                            {% elif a.status == 'upcoming' %}
+                                <button type="button" disabled
+                                        class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-200 text-slate-500 text-sm font-medium cursor-not-allowed">
+                                    <i class="fa-regular fa-clock"></i> Opens {{ a.start_at[:10] }}
+                                </button>
+                            {% else %}
+                                <button type="button" disabled
+                                        class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-200 text-slate-500 text-sm font-medium cursor-not-allowed">
+                                    <i class="fa-solid fa-lock"></i> Registration closed
+                                </button>
+                            {% endif %}
+                        </div>
+                    {% elif a.category == 'payout' %}
+                        <div class="mt-3">
+                            {% if a.id in joined_ids %}
+                                <button type="button" disabled
+                                        class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-green-100 text-green-800 text-sm font-medium cursor-not-allowed">
+                                    <i class="fa-solid fa-circle-check"></i> Joined
+                                </button>
+                            {% elif a.status == 'open' %}
+                                <form method="post"
+                                      action="{{ url_for('student.join_payout', anc_id=a.id) }}">
+                                    <button type="submit"
+                                            class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium">
+                                        <i class="fa-solid fa-handshake"></i> Join pay-out
+                                    </button>
+                                </form>
+                            {% elif a.status == 'upcoming' %}
+                                <button type="button" disabled
+                                        class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-200 text-slate-500 text-sm font-medium cursor-not-allowed">
+                                    <i class="fa-regular fa-clock"></i> Opens {{ a.start_at[:10] }}
+                                </button>
+                            {% else %}
+                                <button type="button" disabled
+                                        class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-200 text-slate-500 text-sm font-medium cursor-not-allowed">
+                                    <i class="fa-solid fa-lock"></i> Pay-out closed
+                                </button>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-slate-500 text-sm">No announcements yet. Check back later.</p>
+    {% endif %}
+</div>
+{% endblock %}

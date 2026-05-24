@@ -22,6 +22,7 @@ from flask import (
 )
 
 from supabase_client import get_supabase
+from services.announcements import annotate
 
 public_bp = Blueprint("public", __name__)
 
@@ -114,6 +115,14 @@ def _set_new_code(sb, profile_id: str, email: str, full_name: str) -> None:
 # -----------------------------------------------------------------
 @public_bp.route("/home")
 def home():
+    # Logged-in users skip the public landing page and go straight
+    # to their own area (announcements for students, dashboard for admins).
+    role = session.get("role")
+    if role == "student":
+        return redirect(url_for("student.announcements"))
+    if role == "admin":
+        return redirect(url_for("admin.dashboard"))
+
     sb = get_supabase()
     res = (
         sb.table("announcements")
@@ -122,7 +131,7 @@ def home():
         .limit(20)
         .execute()
     )
-    return render_template("public/home.html", announcements=res.data or [])
+    return render_template("public/home.html", announcements=annotate(res.data or []))
 
 
 # -----------------------------------------------------------------
@@ -335,6 +344,14 @@ def resend_code():
 # -----------------------------------------------------------------
 @public_bp.route("/login", methods=["GET", "POST"])
 def login():
+    next_url = (request.values.get("next") or "").strip()
+
+    def _safe_next(target: str) -> str | None:
+        # Only allow same-site relative URLs.
+        if target and target.startswith("/") and not target.startswith("//"):
+            return target
+        return None
+
     if request.method == "POST":
         email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""
@@ -346,12 +363,12 @@ def login():
             })
         except Exception as exc:
             flash(f"Login failed: {exc}", "error")
-            return render_template("public/login.html")
+            return render_template("public/login.html", next=next_url)
 
         user = auth_res.user
         if not user:
             flash("Invalid credentials.", "error")
-            return render_template("public/login.html")
+            return render_template("public/login.html", next=next_url)
 
         prof = (
             sb.table("profiles")
@@ -362,7 +379,7 @@ def login():
         )
         if not prof.data:
             flash("Profile not found. Contact an admin.", "error")
-            return render_template("public/login.html")
+            return render_template("public/login.html", next=next_url)
 
         # Block login if email is not verified yet.
         if not prof.data.get("email_verified"):
@@ -374,11 +391,14 @@ def login():
         session["full_name"] = prof.data["full_name"]
         session["role"]      = prof.data["role"]
 
+        safe = _safe_next(next_url)
+        if safe:
+            return redirect(safe)
         if prof.data["role"] == "admin":
             return redirect(url_for("admin.dashboard"))
         return redirect(url_for("student.dashboard"))
 
-    return render_template("public/login.html")
+    return render_template("public/login.html", next=next_url)
 
 
 @public_bp.route("/logout")

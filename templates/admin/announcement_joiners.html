@@ -1,0 +1,56 @@
+{% extends "admin/_layout.html" %}
+{% block title %}Pay-out joiners · Admin{% endblock %}
+
+{% set status_styles = {
+    'open':        'bg-green-100 text-green-800',
+    'upcoming':    'bg-amber-100 text-amber-800',
+    'closed':      'bg-slate-200 text-slate-700',
+    'unscheduled': 'bg-slate-100 text-slate-600',
+} %}
+
+{% block admin_content %}
+<a href="{{ url_for('admin.announcements') }}" class="text-sm text-brand-600 hover:underline">&larr; All announcements</a>
+
+<section class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 mt-2">
+    <header class="mb-3">
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700">Scholarship Pay Out</span>
+            <span class="text-xs uppercase px-2 py-0.5 rounded {{ status_styles.get(announcement.status, 'bg-slate-100 text-slate-700') }}">
+                {{ announcement.status }}
+            </span>
+        </div>
+        <h1 class="text-xl font-bold mt-1">{{ announcement.title }}</h1>
+        {% if announcement.start_at and announcement.end_at %}
+            <p class="text-xs text-slate-500 mt-1">
+                <i class="fa-regular fa-calendar mr-1"></i>
+                {{ announcement.start_at[:16] | replace('T', ' ') }} → {{ announcement.end_at[:16] | replace('T', ' ') }}
+            </p>
+        {% endif %}
+        <p class="mt-2 text-sm text-slate-700 whitespace-pre-line">{{ announcement.body }}</p>
+    </header>
+
+    <h2 class="font-semibold mt-4 mb-2">Joiners ({{ joins | length }})</h2>
+    {% if joins %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-slate-600 text-left">
+                    <tr>
+                        <th class="px-3 py-2">Student</th>
+                        <th class="px-3 py-2">Joined</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for j in joins %}
+                        <tr>
+                            <td class="px-3 py-2">{{ j.student.full_name if j.student else '—' }}</td>
+                            <td class="px-3 py-2 text-slate-500">{{ j.joined_at[:16] | replace('T', ' ') }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-sm text-slate-500">Wala pang sumasali.</p>
+    {% endif %}
+</section>
+{% endblock %}

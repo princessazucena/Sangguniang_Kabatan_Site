@@ -21,9 +21,24 @@ create table if not exists public.announcements (
     id bigserial primary key,
     title text not null,
     body text not null,
+    category text check (category in ('registration','payout','general')),
+    start_at timestamptz,
+    end_at   timestamptz,
     posted_by uuid references public.profiles(id) on delete set null,
     created_at timestamptz not null default now()
 );
+
+-- Payout joiners (students who tap "Join" on a payout announcement).
+create table if not exists public.announcement_joins (
+    id bigserial primary key,
+    announcement_id bigint not null references public.announcements(id) on delete cascade,
+    student_id      uuid   not null references public.profiles(id)      on delete cascade,
+    joined_at       timestamptz not null default now(),
+    unique (announcement_id, student_id)
+);
+
+create index if not exists idx_anc_joins_anc on public.announcement_joins(announcement_id);
+create index if not exists idx_anc_joins_student on public.announcement_joins(student_id);
 
 -- One scholarship application per student (extend as you like).
 create table if not exists public.applications (
@@ -77,6 +92,7 @@ alter table public.profiles            enable row level security;
 alter table public.announcements       enable row level security;
 alter table public.applications        enable row level security;
 alter table public.application_files   enable row level security;
+alter table public.announcement_joins  enable row level security;
 
 -- profiles: a user can read/update their own profile
 drop policy if exists "profiles self read"   on public.profiles;
@@ -101,3 +117,11 @@ drop policy if exists "files self read"   on public.application_files;
 drop policy if exists "files self insert" on public.application_files;
 create policy "files self read"   on public.application_files for select using (auth.uid() = student_id);
 create policy "files self insert" on public.application_files for insert with check (auth.uid() = student_id);
+
+-- announcement_joins: a student can see/insert/delete their own joins
+drop policy if exists "joins self read"   on public.announcement_joins;
+drop policy if exists "joins self insert" on public.announcement_joins;
+drop policy if exists "joins self delete" on public.announcement_joins;
+create policy "joins self read"   on public.announcement_joins for select using (auth.uid() = student_id);
+create policy "joins self insert" on public.announcement_joins for insert with check (auth.uid() = student_id);
+create policy "joins self delete" on public.announcement_joins for delete using (auth.uid() = student_id);
