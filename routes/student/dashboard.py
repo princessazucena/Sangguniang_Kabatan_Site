@@ -19,6 +19,7 @@ from ._common import (
     student_bp, student_required,
     LEVEL_LABELS, YEAR_LABELS, LEVEL_SLOTS, REQUIREMENT_SLOTS,
     student_applications, application_for_open_window, files_by_slot,
+    student_has_verified_application,
 )
 
 
@@ -57,12 +58,19 @@ def dashboard():
         applications, open_registration["id"] if open_registration else None,
     )
 
+    # Once verified, the student is locked in for this cycle — hide the
+    # open-registration banner and skip the active-application card.
+    already_verified = student_has_verified_application(applications)
+    if already_verified:
+        open_registration = None
+        open_app = None
+
     # Per-student status counts.
     status_counts = Counter(a.get("status") for a in applications)
 
     # Active application = the one tied to the open window if any,
     # otherwise the most recent. Show progress + missing slots.
-    active = open_app or (applications[0] if applications else None)
+    active = None if already_verified else (open_app or (applications[0] if applications else None))
     active_progress = 0
     active_missing: list[str] = []
     if active and active.get("education_level"):
@@ -137,6 +145,7 @@ def dashboard():
         active_application=active,
         active_progress=active_progress,
         active_missing=active_missing,
+        already_verified=already_verified,
         status_counts={
             "pending":  status_counts.get("pending", 0),
             "verified": status_counts.get("verified", 0),

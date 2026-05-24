@@ -11,7 +11,20 @@
 <div class="space-y-3 sm:space-y-5">
 
     {# ---------- Open registration banner ---------- #}
-    {% if open_registration %}
+    {% if already_verified %}
+        <div class="rounded-xl border border-green-200 bg-green-50 p-3 sm:p-5 flex items-start gap-2 sm:gap-3 shadow-sm">
+            <span class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-circle-check"></i>
+            </span>
+            <div class="text-xs sm:text-sm text-green-800">
+                <p class="font-semibold text-sm sm:text-base">You're already a verified scholar.</p>
+                <p>Hindi ka na pwedeng mag-apply ulit sa scholarship registration. Bantayan mo na lang ang
+                    <a href="{{ url_for('student.announcements') }}" class="underline font-medium">announcements</a>
+                    para sa pay-out at iba pang updates.
+                </p>
+            </div>
+        </div>
+    {% elif open_registration %}
         <div class="rounded-xl border border-brand-200 bg-brand-50 p-3 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 shadow-sm">
             <span class="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-brand-500 text-white flex items-center justify-center shrink-0">
                 <i class="fa-solid fa-bullhorn"></i>
@@ -105,7 +118,9 @@
             <div class="px-4 py-8 text-center text-xs sm:text-sm text-slate-500">
                 <i class="fa-regular fa-folder-open text-2xl sm:text-3xl text-slate-300 mb-2 block"></i>
                 You don't have any applications yet.
-                {% if open_registration %}
+                {% if already_verified %}
+                    Verified ka na sa nakaraang registration.
+                {% elif open_registration %}
                     Tap <span class="font-semibold">Apply now</span> above to get started.
                 {% else %}
                     Wait for the next registration window.

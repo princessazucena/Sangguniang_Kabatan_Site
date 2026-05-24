@@ -460,3 +460,216 @@ def logout():
     session.clear()
     flash("You have been logged out.", "success")
     return redirect(url_for("public.home"))
+
+
+# -----------------------------------------------------------------
+# forgot password
+# -----------------------------------------------------------------
+def _send_reset_email(to_email: str, full_name: str, code: str) -> None:
+    """Send the password-reset OTP via the same Brevo HTTP API."""
+    api_key = os.environ.get("BREVO_API_KEY")
+    if not api_key:
+        raise RuntimeError("BREVO_API_KEY is not configured on the server.")
+
+    sender_email = os.environ.get("BREVO_SENDER_EMAIL")
+    sender_name  = os.environ.get(
+        "BREVO_SENDER_NAME", "Sangguniang Kabataan ng Bukal",
+    )
+    if not sender_email:
+        raise RuntimeError("BREVO_SENDER_EMAIL is not configured on the server.")
+
+    html_body = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 480px;">
+        <h2 style="color:#476a40;">Reset your password</h2>
+        <p>Hi {full_name or 'there'}, use the verification code below to
+           reset your Scholarship Portal password:</p>
+        <p style="font-size:28px; font-weight:bold; letter-spacing:8px;
+                  padding:16px 20px; background:#f1f7ef; border-radius:8px;
+                  display:inline-block; color:#476a40; font-family:monospace;">
+            {code}
+        </p>
+        <p style="color:#6b7280; font-size:13px;">
+            This code expires in {CODE_TTL_MINUTES} minutes. If you didn't
+            request a reset, you can safely ignore this email.
+        </p>
+    </div>
+    """
+
+    resp = requests.post(
+        "https://api.brevo.com/v3/smtp/email",
+        headers={
+            "api-key":      api_key,
+            "Content-Type": "application/json",
+            "Accept":       "application/json",
+        },
+        json={
+            "sender":      {"name": sender_name, "email": sender_email},
+            "to":          [{"email": to_email, "name": full_name or to_email}],
+            "subject":     "Your Scholarship Portal password reset code",
+            "htmlContent": html_body,
+        },
+        timeout=15,
+    )
+    if resp.status_code >= 300:
+        raise RuntimeError(
+            f"Email provider returned {resp.status_code}: {resp.text}"
+        )
+
+
+def _store_reset_code(sb, profile_id: str) -> str:
+    """Generate a fresh 6-digit reset code, persist it, return it."""
+    code = _generate_code()
+    expires_at = (datetime.now(timezone.utc) + timedelta(minutes=CODE_TTL_MINUTES)).isoformat()
+    sb.table("profiles").update({
+        "verification_code":            code,
+        "verification_code_expires_at": expires_at,
+    }).eq("id", profile_id).execute()
+    return code
+
+
+def _find_user_by_email(sb, email: str):
+    """Look up an auth user by lowercased email. Returns the user or None."""
+    try:
+        users = sb.auth.admin.list_users()
+        user_list = getattr(users, "users", None) or users
+        for u in user_list:
+            if (u.email or "").lower() == email:
+                return u
+    except Exception:
+        return None
+    return None
+
+
+@public_bp.route("/forgot", methods=["GET", "POST"])
+def forgot_password():
+    """Step 1 — student enters email, we send a reset code."""
+    if request.method == "POST":
+        email = (request.form.get("email") or "").strip().lower()
+        if not email:
+            flash("Please enter your email.", "error")
+            return render_template("public/forgot_password.html", email="")
+
+        sb = get_supabase()
+        user = _find_user_by_email(sb, email)
+        # Don't leak whether the email exists — always pretend we sent it.
+        if user:
+            try:
+                prof = (
+                    sb.table("profiles")
+                    .select("full_name, email_verified")
+                    .eq("id", user.id)
+                    .single()
+                    .execute()
+                ).data or {}
+                code = _store_reset_code(sb, user.id)
+                _send_reset_email(email, prof.get("full_name") or "", code)
+            except Exception as exc:
+                # Log it server-side via the flash, but still redirect to
+                # the verify step so the form is consistent.
+                flash(f"Could not send reset email: {exc}", "error")
+                return render_template("public/forgot_password.html", email=email)
+
+        flash("If that email is registered, we sent a reset code. Check your inbox.", "success")
+        return redirect(url_for("public.reset_password", email=email))
+
+    return render_template("public/forgot_password.html", email="")
+
+
+@public_bp.route("/reset", methods=["GET", "POST"])
+def reset_password():
+    """Step 2 — student enters the OTP and a new password."""
+    email = (request.values.get("email") or "").strip().lower()
+    if not email:
+        return redirect(url_for("public.forgot_password"))
+
+    if request.method == "POST":
+        token       = (request.form.get("token") or "").strip()
+        new_pw      = request.form.get("password") or ""
+        confirm_pw  = request.form.get("password_confirm") or ""
+
+        if not token.isdigit() or len(token) != 6:
+            flash("Enter the 6-digit code from the email.", "error")
+            return render_template("public/reset_password.html", email=email)
+
+        pw_err = _validate_password(new_pw)
+        if pw_err:
+            flash(pw_err, "error")
+            return render_template("public/reset_password.html", email=email)
+        if new_pw != confirm_pw:
+            flash("Passwords do not match.", "error")
+            return render_template("public/reset_password.html", email=email)
+
+        sb = get_supabase()
+        user = _find_user_by_email(sb, email)
+        if not user:
+            flash("Invalid or expired code.", "error")
+            return render_template("public/reset_password.html", email=email)
+
+        prof = (
+            sb.table("profiles")
+            .select("verification_code, verification_code_expires_at")
+            .eq("id", user.id)
+            .single()
+            .execute()
+        ).data or {}
+
+        if not prof.get("verification_code"):
+            flash("No code on file. Tap 'Resend code' to get a fresh one.", "error")
+            return render_template("public/reset_password.html", email=email)
+
+        expires_str = prof.get("verification_code_expires_at")
+        if expires_str:
+            expires = datetime.fromisoformat(expires_str.replace("Z", "+00:00"))
+            if datetime.now(timezone.utc) > expires:
+                flash("That code has expired. Tap 'Resend code' to get a new one.", "error")
+                return render_template("public/reset_password.html", email=email)
+
+        if token != prof["verification_code"]:
+            flash("Invalid code. Please try again.", "error")
+            return render_template("public/reset_password.html", email=email)
+
+        # All checks passed — update the auth password and clear the code.
+        try:
+            sb.auth.admin.update_user_by_id(user.id, {"password": new_pw})
+        except Exception as exc:
+            flash(f"Could not update your password: {exc}", "error")
+            return render_template("public/reset_password.html", email=email)
+
+        sb.table("profiles").update({
+            "verification_code":            None,
+            "verification_code_expires_at": None,
+        }).eq("id", user.id).execute()
+
+        flash("Password updated. Please log in with your new password.", "success")
+        return redirect(url_for("public.login"))
+
+    return render_template("public/reset_password.html", email=email)
+
+
+@public_bp.route("/forgot/resend", methods=["POST"])
+def resend_reset_code():
+    """Re-send a reset OTP from the reset page."""
+    email = (request.form.get("email") or "").strip().lower()
+    if not email:
+        return redirect(url_for("public.forgot_password"))
+
+    sb = get_supabase()
+    user = _find_user_by_email(sb, email)
+    if user:
+        try:
+            prof = (
+                sb.table("profiles")
+                .select("full_name")
+                .eq("id", user.id)
+                .single()
+                .execute()
+            ).data or {}
+            code = _store_reset_code(sb, user.id)
+            _send_reset_email(email, prof.get("full_name") or "", code)
+            flash("New code sent. Check your email.", "success")
+        except Exception as exc:
+            flash(f"Could not resend code: {exc}", "error")
+    else:
+        flash("If that email is registered, we sent a new code.", "success")
+
+    return redirect(url_for("public.reset_password", email=email))

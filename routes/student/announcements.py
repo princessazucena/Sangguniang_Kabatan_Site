@@ -8,7 +8,7 @@ from flask import render_template, redirect, url_for, flash, session
 from supabase_client import get_supabase
 from services.announcements import annotate, schedule_status, JOINABLE_CATEGORIES
 
-from ._common import student_bp, student_required
+from ._common import student_bp, student_required, student_applications, student_has_verified_application
 
 
 @student_bp.route("/announcements")
@@ -39,10 +39,15 @@ def announcements():
         ).data or []
         joined_ids = {r["announcement_id"] for r in rows}
 
+    already_verified = student_has_verified_application(
+        student_applications(sb, student_id)
+    )
+
     return render_template(
         "student/announcements.html",
         announcements=items,
         joined_ids=joined_ids,
+        already_verified=already_verified,
     )
 
 

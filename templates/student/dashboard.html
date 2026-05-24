@@ -52,7 +52,21 @@
                 </p>
             </div>
 
-            {% if open_registration %}
+            {% if already_verified %}
+                <div class="rounded-xl border border-green-200 bg-green-50 p-3 sm:p-4 flex items-center gap-3 flex-1 sm:flex-none min-w-[14rem]">
+                    <span class="w-9 h-9 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </span>
+                    <div class="min-w-0">
+                        <p class="text-[10px] uppercase tracking-wide text-green-700 font-semibold">
+                            You're a verified scholar
+                        </p>
+                        <p class="text-xs text-green-800">
+                            Watch the announcements for the next pay-out.
+                        </p>
+                    </div>
+                </div>
+            {% elif open_registration %}
                 <div class="rounded-xl border border-brand-200 bg-brand-50 p-3 sm:p-4 flex items-center gap-3 flex-1 sm:flex-none min-w-[14rem]">
                     <span class="w-9 h-9 rounded-full bg-brand-500 text-white flex items-center justify-center shrink-0">
                         <i class="fa-solid fa-bullhorn"></i>

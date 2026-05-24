@@ -103,15 +103,7 @@ def build_packet(
     docs = list(documents)
     writer = PdfWriter()
 
-    # Cover page
-    cover = _cover_page(
-        student_name, level_label, year_label,
-        [d["label"] for d in docs],
-    )
-    for page in PdfReader(io.BytesIO(cover)).pages:
-        writer.add_page(page)
-
-    # Each document
+    # Each document (no cover page — admin asked for the documents only).
     for doc in docs:
         label = doc["label"]
         kind  = doc["kind"]

@@ -141,3 +141,12 @@ def registration_window_active(app_row: dict) -> bool:
     if not reg:
         return False
     return schedule_status(reg) == "open"
+
+
+def student_has_verified_application(applications: list[dict]) -> bool:
+    """True if the student already has *any* verified application.
+
+    Once a student is verified for a registration window, they are
+    locked in for that cycle — no new applications, no banners.
+    """
+    return any(a.get("status") == "verified" for a in applications)

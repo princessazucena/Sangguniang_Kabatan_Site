@@ -57,7 +57,12 @@
 
                     {% if a.category == 'registration' %}
                         <div class="mt-2 sm:mt-3">
-                            {% if a.status == 'open' %}
+                            {% if already_verified %}
+                                <button type="button" disabled
+                                        class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-green-100 text-green-800 text-xs sm:text-sm font-medium cursor-not-allowed">
+                                    <i class="fa-solid fa-circle-check"></i> Verified scholar
+                                </button>
+                            {% elif a.status == 'open' %}
                                 <form method="post" action="{{ url_for('student.apply') }}">
                                     <button type="submit"
                                             class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-xs sm:text-sm font-medium">

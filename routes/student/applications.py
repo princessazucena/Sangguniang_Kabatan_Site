@@ -19,7 +19,7 @@ from ._common import (
     REQUIREMENT_SLOTS, LEVEL_SLOTS, YEAR_OPTIONS, LEVEL_LABELS, YEAR_LABELS,
     PDF_MIMES, IMAGE_MIMES, MAX_UPLOAD_BYTES,
     student_applications, application_for_open_window, get_application,
-    files_by_slot, registration_window_active,
+    files_by_slot, registration_window_active, student_has_verified_application,
 )
 
 
@@ -41,6 +41,13 @@ def applications_list():
         applications, open_registration["id"] if open_registration else None,
     )
 
+    # Once verified, a student is locked in — hide any open-registration
+    # call-to-action so they can't start a new application this cycle.
+    already_verified = student_has_verified_application(applications)
+    if already_verified:
+        open_registration = None
+        open_app = None
+
     # Decorate each application for display (level/year labels).
     for a in applications:
         a["level_label"] = LEVEL_LABELS.get(a.get("education_level"), "—")
@@ -51,6 +58,7 @@ def applications_list():
         applications=applications,
         open_registration=open_registration,
         open_application=open_app,
+        already_verified=already_verified,
     )
 
 
@@ -64,6 +72,12 @@ def apply():
     open_reg = current_open_registration(sb)
     if not open_reg:
         flash("There is no open scholarship registration right now.", "error")
+        return redirect(url_for("student.applications_list"))
+
+    # Block applying if any earlier application is already verified.
+    existing_apps = student_applications(sb, student_id)
+    if student_has_verified_application(existing_apps):
+        flash("Verified ka na sa nakaraang registration. Hindi ka na pwedeng mag-apply muli.", "error")
         return redirect(url_for("student.applications_list"))
 
     # If they already applied for this window, route them to it.
@@ -108,6 +122,11 @@ def application(app_id: int):
 
     open_registration = current_open_registration(sb)
     window_open = registration_window_active(app_row)
+
+    # If the student is already verified anywhere, suppress the "another
+    # registration is open — go apply again" hint.
+    if student_has_verified_application(student_applications(sb, student_id)):
+        open_registration = None
 
     # Level not picked yet — show selection screen first.
     if not app_row.get("education_level") or not app_row.get("year_level"):
