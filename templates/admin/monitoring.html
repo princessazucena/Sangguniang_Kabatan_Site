@@ -7,13 +7,22 @@
     'closed':      'bg-slate-200 text-slate-700',
     'unscheduled': 'bg-slate-100 text-slate-600',
 } %}
+{% set category_styles = {
+    'payout':      'bg-blue-50 text-blue-700',
+    'kk_assembly': 'bg-purple-50 text-purple-700',
+} %}
+{% set category_labels = {
+    'payout':      'Pay-out',
+    'kk_assembly': 'KK Assembly',
+} %}
 
 {% macro stat_card(label, value, icon, tone='brand') %}
     {% set tone_styles = {
-        'brand': 'bg-brand-50 text-brand-700',
-        'blue':  'bg-blue-50 text-blue-700',
-        'green': 'bg-green-50 text-green-700',
-        'slate': 'bg-slate-100 text-slate-700',
+        'brand':  'bg-brand-50 text-brand-700',
+        'blue':   'bg-blue-50 text-blue-700',
+        'green':  'bg-green-50 text-green-700',
+        'purple': 'bg-purple-50 text-purple-700',
+        'slate':  'bg-slate-100 text-slate-700',
     } %}
     <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex items-center gap-3">
         <span class="w-10 h-10 rounded-md flex items-center justify-center {{ tone_styles.get(tone, tone_styles['brand']) }}">
@@ -53,7 +62,7 @@
 {% block admin_content %}
 <div class="mb-5">
     <h1 class="text-2xl font-bold text-brand-700">Monitoring</h1>
-    <p class="text-sm text-slate-500">Summary of verified scholars and pay-out participation.</p>
+    <p class="text-sm text-slate-500">Verified scholars per registration window and joiners of every event.</p>
 </div>
 
 {# ---------- Tab switcher ---------- #}
@@ -63,10 +72,10 @@
         <i class="fa-solid fa-graduation-cap mr-1"></i>
         Verified scholars
     </button>
-    <button type="button" data-tab-btn data-target="tab-payouts"
+    <button type="button" data-tab-btn data-target="tab-events"
             class="px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent -mb-px">
-        <i class="fa-solid fa-hand-holding-dollar mr-1"></i>
-        Pay-out joiners
+        <i class="fa-solid fa-people-group mr-1"></i>
+        Event joiners
     </button>
 </div>
 
@@ -76,7 +85,7 @@
     <div class="grid sm:grid-cols-3 gap-4">
         {{ stat_card('Verified scholars', verified_total, 'fa-circle-check', 'green') }}
         {{ stat_card('Unique students', verified_unique_students, 'fa-user-graduate', 'brand') }}
-        {{ stat_card('Registration windows', registration_breakdown | length, 'fa-clipboard-list', 'blue') }}
+        {{ stat_card('Registration windows', registration_count, 'fa-clipboard-list', 'blue') }}
     </div>
 
     <div class="grid lg:grid-cols-2 gap-4">
@@ -90,109 +99,227 @@
         </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5">
-        <h2 class="font-semibold mb-3">By registration window</h2>
-        {{ breakdown_list(registration_breakdown, verified_total) }}
-    </div>
-
-    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        <header class="px-5 py-3 border-b flex items-center justify-between">
-            <h2 class="font-semibold">Verified scholar list</h2>
-            <span class="text-xs text-slate-500">{{ verified_total }} total</span>
-        </header>
-        {% if verified %}
-            <div class="overflow-x-auto max-h-[40rem] overflow-y-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-slate-50 text-slate-600 text-left sticky top-0 z-10">
-                        <tr>
-                            <th class="px-5 py-2">Student</th>
-                            <th class="px-5 py-2">Level</th>
-                            <th class="px-5 py-2">Year</th>
-                            <th class="px-5 py-2">Registration</th>
-                            <th class="px-5 py-2">Verified on</th>
-                            <th class="px-5 py-2"></th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100"
-                           data-paginate data-page-size="15"
-                           data-pagination-into="#scholars-pagination">
-                        {% for v in verified %}
-                            <tr data-page-item>
-                                <td class="px-5 py-2">{{ v.student.full_name if v.student else '—' }}</td>
-                                <td class="px-5 py-2 text-slate-600">{{ v.level_label }}</td>
-                                <td class="px-5 py-2 text-slate-600">{{ v.year_label }}</td>
-                                <td class="px-5 py-2 text-slate-600 truncate">
-                                    {{ v.registration.title if v.registration else '—' }}
-                                </td>
-                                <td class="px-5 py-2 text-slate-500">{{ v.reviewed_at | ph_date if v.reviewed_at else '—' }}</td>
-                                <td class="px-5 py-2 text-right">
-                                    <a href="{{ url_for('admin.review', app_id=v.id) }}"
-                                       class="text-brand-600 hover:underline text-sm">View</a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <div id="scholars-pagination"></div>
-        {% else %}
-            <p class="px-5 py-8 text-slate-500 text-sm text-center">No verified scholars yet.</p>
+    {# ---- Search bar ---- #}
+    <form method="get" class="bg-white rounded-xl shadow-sm border border-slate-100 p-3 sm:p-4 flex items-center gap-2 sm:gap-3 flex-wrap">
+        <div class="flex-1 min-w-0 relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input type="search" name="q" value="{{ q_scholars }}"
+                   placeholder="Search a scholar by name, level, or year"
+                   class="w-full pl-9 pr-3 py-2 rounded-md border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+        </div>
+        {# Preserve the joiners filter when scholars search is submitted. #}
+        {% if q_joiners %}
+            <input type="hidden" name="qj" value="{{ q_joiners }}" />
         {% endif %}
-    </div>
-</section>
+        <button type="submit"
+                class="px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium">
+            Search
+        </button>
+        {% if q_scholars %}
+            <a href="{{ url_for('admin.monitoring', qj=q_joiners) if q_joiners else url_for('admin.monitoring') }}"
+               class="text-xs text-slate-500 hover:underline">Clear</a>
+        {% endif %}
+    </form>
 
-{# ===================== Pay-out joiners tab ===================== #}
-<section data-tab-panel id="tab-payouts" class="space-y-5 hidden">
-
-    <div class="grid sm:grid-cols-3 gap-4">
-        {{ stat_card('Total joins', total_joins, 'fa-handshake', 'blue') }}
-        {{ stat_card('Pay-out announcements', payouts | length, 'fa-bullhorn', 'brand') }}
-        {{ stat_card('Open right now',
-                     payouts | selectattr('status', 'equalto', 'open') | list | length,
-                     'fa-circle-play', 'green') }}
-    </div>
-
-    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        <header class="px-5 py-3 border-b flex items-center justify-between">
-            <h2 class="font-semibold">Pay-outs</h2>
-            <span class="text-xs text-slate-500">{{ payouts | length }} total</span>
-        </header>
-        {% if payouts %}
-            <ul class="divide-y divide-slate-100">
-                {% for p in payouts %}
-                    <li class="px-5 py-4 flex items-start justify-between gap-3 flex-wrap">
+    {# ---- Per-registration groups ---- #}
+    {% if scholar_groups %}
+        <div class="space-y-4">
+            {% for g in scholar_groups %}
+                {% set shown = g['items'] | length %}
+                <section class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                    <header class="px-4 sm:px-5 py-3 border-b flex items-start justify-between gap-3 flex-wrap">
                         <div class="min-w-0">
-                            <div class="flex items-center gap-2 flex-wrap mb-1">
-                                <span class="text-xs uppercase tracking-wide px-2 py-0.5 rounded {{ status_styles.get(p.status, 'bg-slate-100 text-slate-700') }}">
-                                    {{ p.status }}
-                                </span>
-                                <p class="font-semibold truncate">{{ p.title }}</p>
-                            </div>
-                            {% if p.start_at and p.end_at %}
-                                <p class="text-xs text-slate-500">
+                            <h3 class="font-semibold text-slate-800 truncate">
+                                <i class="fa-solid fa-clipboard-list text-brand-500 mr-1"></i>
+                                {{ g['title'] }}
+                            </h3>
+                            {% if g['start_at'] and g['end_at'] %}
+                                <p class="text-[11px] sm:text-xs text-slate-500 mt-0.5">
                                     <i class="fa-regular fa-calendar mr-1"></i>
-                                    {{ p.start_at | ph }} → {{ p.end_at | ph }}
+                                    {{ g['start_at'] | ph }} → {{ g['end_at'] | ph }}
                                 </p>
                             {% endif %}
                         </div>
-                        <div class="flex items-center gap-3">
-                            <div class="text-right">
-                                <p class="text-2xl font-bold leading-tight">{{ p.join_count }}</p>
-                                <p class="text-[11px] uppercase tracking-wide text-slate-400">joiners</p>
-                            </div>
-                            <a href="{{ url_for('admin.announcement_joiners', anc_id=p.id) }}"
-                               class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-brand-50 text-brand-700 hover:bg-brand-100 text-sm font-medium">
-                                <i class="fa-solid fa-users"></i>
-                                View list
-                            </a>
+                        <div class="text-right">
+                            <p class="text-2xl font-bold leading-tight text-brand-700">{{ g['total'] }}</p>
+                            <p class="text-[10px] uppercase tracking-wide text-slate-400">verified</p>
+                            {% if q_scholars and shown != g['total'] %}
+                                <p class="text-[11px] text-slate-500">
+                                    Showing {{ shown }} match{{ '' if shown == 1 else 'es' }}
+                                </p>
+                            {% endif %}
                         </div>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p class="px-5 py-8 text-slate-500 text-sm text-center">No pay-out announcements yet.</p>
-        {% endif %}
+                    </header>
+
+                    {% if g['items'] %}
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-slate-50 text-slate-600 text-left">
+                                    <tr>
+                                        <th class="px-4 sm:px-5 py-2">Student</th>
+                                        <th class="px-4 sm:px-5 py-2">Level</th>
+                                        <th class="px-4 sm:px-5 py-2">Year</th>
+                                        <th class="px-4 sm:px-5 py-2">Verified on</th>
+                                        <th class="px-4 sm:px-5 py-2"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100"
+                                       data-paginate data-page-size="15"
+                                       data-pagination-into="#scholars-pagination-{{ loop.index }}">
+                                    {% for v in g['items'] %}
+                                        <tr data-page-item>
+                                            <td class="px-4 sm:px-5 py-2">{{ v.student.full_name if v.student else '—' }}</td>
+                                            <td class="px-4 sm:px-5 py-2 text-slate-600">{{ v.level_label }}</td>
+                                            <td class="px-4 sm:px-5 py-2 text-slate-600">{{ v.year_label }}</td>
+                                            <td class="px-4 sm:px-5 py-2 text-slate-500">
+                                                {% if v.reviewed_at %}
+                                                    {{ v.reviewed_at | ph }}
+                                                {% else %}—{% endif %}
+                                            </td>
+                                            <td class="px-4 sm:px-5 py-2 text-right">
+                                                <a href="{{ url_for('admin.review', app_id=v.id) }}"
+                                                   class="text-brand-600 hover:underline text-sm">View</a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="scholars-pagination-{{ loop.index }}"></div>
+                    {% else %}
+                        <p class="px-5 py-6 text-sm text-slate-500 text-center">
+                            {% if q_scholars %}
+                                No scholar in this window matches "{{ q_scholars }}".
+                            {% else %}
+                                No verified scholars in this window yet.
+                            {% endif %}
+                        </p>
+                    {% endif %}
+                </section>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-10 text-center">
+            <i class="fa-solid fa-graduation-cap text-4xl text-slate-300 mb-3"></i>
+            <p class="text-slate-500 text-sm">No verified scholars yet.</p>
+        </div>
+    {% endif %}
+</section>
+
+{# ===================== Event joiners tab ===================== #}
+<section data-tab-panel id="tab-events" class="space-y-5 hidden">
+
+    <div class="grid sm:grid-cols-4 gap-4">
+        {{ stat_card('Total joiners', total_joins, 'fa-handshake', 'blue') }}
+        {{ stat_card('Joinable events', events_total, 'fa-bullhorn', 'brand') }}
+        {{ stat_card('Pay-outs', payouts_count, 'fa-hand-holding-dollar', 'blue') }}
+        {{ stat_card('KK assemblies', assembly_count, 'fa-people-group', 'purple') }}
     </div>
+
+    {# ---- Search bar ---- #}
+    <form method="get" class="bg-white rounded-xl shadow-sm border border-slate-100 p-3 sm:p-4 flex items-center gap-2 sm:gap-3 flex-wrap">
+        <div class="flex-1 min-w-0 relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input type="search" name="qj" value="{{ q_joiners }}"
+                   placeholder="Search a joiner by name"
+                   class="w-full pl-9 pr-3 py-2 rounded-md border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+        </div>
+        {# Preserve the scholars filter so switching tabs doesn't lose it. #}
+        {% if q_scholars %}
+            <input type="hidden" name="q" value="{{ q_scholars }}" />
+        {% endif %}
+        <button type="submit"
+                class="px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium">
+            Search
+        </button>
+        {% if q_joiners %}
+            <a href="{{ url_for('admin.monitoring', q=q_scholars) if q_scholars else url_for('admin.monitoring') }}#tab-events"
+               class="text-xs text-slate-500 hover:underline">Clear</a>
+        {% endif %}
+    </form>
+
+    {# ---- Per-event groups ---- #}
+    {% if event_groups %}
+        <div class="space-y-4">
+            {% for e in event_groups %}
+                {% set shown = e['joiners'] | length %}
+                <section class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                    <header class="px-4 sm:px-5 py-3 border-b flex items-start justify-between gap-3 flex-wrap">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap mb-0.5">
+                                <span class="text-[10px] uppercase px-2 py-0.5 rounded {{ category_styles.get(e['category'], 'bg-slate-100 text-slate-700') }}">
+                                    {{ category_labels.get(e['category'], 'Event') }}
+                                </span>
+                                <span class="text-[10px] uppercase px-2 py-0.5 rounded {{ status_styles.get(e['status'], 'bg-slate-100 text-slate-700') }}">
+                                    {{ e['status'] }}
+                                </span>
+                            </div>
+                            <h3 class="font-semibold text-slate-800 truncate">{{ e['title'] }}</h3>
+                            {% if e['start_at'] and e['end_at'] %}
+                                <p class="text-[11px] sm:text-xs text-slate-500 mt-0.5">
+                                    <i class="fa-regular fa-calendar mr-1"></i>
+                                    {{ e['start_at'] | ph }} → {{ e['end_at'] | ph }}
+                                </p>
+                            {% endif %}
+                        </div>
+                        <div class="text-right">
+                            <p class="text-2xl font-bold leading-tight">{{ e['join_count'] }}</p>
+                            <p class="text-[10px] uppercase tracking-wide text-slate-400">joined</p>
+                            {% if q_joiners and shown != e['join_count'] %}
+                                <p class="text-[11px] text-slate-500">
+                                    Showing {{ shown }} match{{ '' if shown == 1 else 'es' }}
+                                </p>
+                            {% endif %}
+                        </div>
+                    </header>
+
+                    {% if e['joiners'] %}
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-slate-50 text-slate-600 text-left">
+                                    <tr>
+                                        <th class="px-4 sm:px-5 py-2">Student</th>
+                                        <th class="px-4 sm:px-5 py-2">Joined on</th>
+                                        <th class="px-4 sm:px-5 py-2 text-right">
+                                            <a href="{{ url_for('admin.announcement_joiners', anc_id=e['id']) }}"
+                                               class="text-xs text-brand-600 hover:underline">View page &rarr;</a>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100"
+                                       data-paginate data-page-size="15"
+                                       data-pagination-into="#joiners-pagination-{{ loop.index }}">
+                                    {% for j in e['joiners'] %}
+                                        <tr data-page-item>
+                                            <td class="px-4 sm:px-5 py-2">{{ j.student.full_name if j.student else '—' }}</td>
+                                            <td class="px-4 sm:px-5 py-2 text-slate-500">
+                                                {% if j.joined_at %}{{ j.joined_at | ph }}{% else %}—{% endif %}
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="joiners-pagination-{{ loop.index }}"></div>
+                    {% else %}
+                        <p class="px-5 py-6 text-sm text-slate-500 text-center">
+                            {% if q_joiners %}
+                                No joiner in this event matches "{{ q_joiners }}".
+                            {% else %}
+                                No joiners yet.
+                            {% endif %}
+                        </p>
+                    {% endif %}
+                </section>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-10 text-center">
+            <i class="fa-solid fa-people-group text-4xl text-slate-300 mb-3"></i>
+            <p class="text-slate-500 text-sm">No joinable events yet.</p>
+        </div>
+    {% endif %}
 </section>
 
 <script>
@@ -214,6 +341,11 @@
     }
     buttons.forEach(b =>
         b.addEventListener('click', () => activate(b.dataset.target)));
+
+    // Honor a #tab-events anchor so links can deep-link directly there.
+    if (window.location.hash === '#tab-events') {
+        activate('tab-events');
+    }
 })();
 </script>
 {% endblock %}
