@@ -18,6 +18,7 @@ create table if not exists public.profiles (
     address_barangay text,
     address_city     text,
     address_province text,
+    address_region   text,
     address_zip      text,
     role text not null default 'student' check (role in ('student','admin')),
     created_at timestamptz not null default now()

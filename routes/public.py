@@ -24,6 +24,7 @@ from flask import (
 
 from supabase_client import get_supabase
 from services.announcements import annotate
+from services import psgc
 
 public_bp = Blueprint("public", __name__)
 
@@ -127,6 +128,34 @@ def _set_new_code(sb, profile_id: str, email: str, full_name: str) -> None:
 
 
 # -----------------------------------------------------------------
+# PSGC lookup proxy (region / province / city-municipality / barangay)
+# -----------------------------------------------------------------
+from flask import jsonify
+
+
+@public_bp.route("/api/psgc/regions")
+def psgc_regions():
+    return jsonify(psgc.list_regions())
+
+
+@public_bp.route("/api/psgc/regions/<region_code>/provinces")
+def psgc_provinces(region_code: str):
+    return jsonify(psgc.list_provinces(region_code))
+
+
+@public_bp.route("/api/psgc/cities-municipalities")
+def psgc_cities():
+    region_code   = (request.args.get("region") or "").strip()
+    province_code = (request.args.get("province") or "").strip() or None
+    return jsonify(psgc.list_cities_municipalities(region_code, province_code))
+
+
+@public_bp.route("/api/psgc/cities-municipalities/<code>/barangays")
+def psgc_barangays(code: str):
+    return jsonify(psgc.list_barangays(code))
+
+
+# -----------------------------------------------------------------
 # home
 # -----------------------------------------------------------------
 @public_bp.route("/home")
@@ -167,9 +196,10 @@ def signup():
             "address_house_no": (request.form.get("address_house_no") or "").strip(),
             "address_street":   (request.form.get("address_street") or "").strip(),
             "address_purok":    (request.form.get("address_purok") or "").strip(),
-            "address_barangay": (request.form.get("address_barangay") or "").strip(),
-            "address_city":     (request.form.get("address_city") or "").strip(),
+            "address_region":   (request.form.get("address_region") or "").strip(),
             "address_province": (request.form.get("address_province") or "").strip(),
+            "address_city":     (request.form.get("address_city") or "").strip(),
+            "address_barangay": (request.form.get("address_barangay") or "").strip(),
             "address_zip":      (request.form.get("address_zip") or "").strip(),
         }
         password   = request.form.get("password") or ""
@@ -189,14 +219,19 @@ def signup():
         required_addr = {
             "address_house_no": "House / Lot / Block number",
             "address_purok":    "Purok / Sitio",
-            "address_barangay": "Barangay",
+            "address_region":   "Region",
             "address_city":     "City / Municipality",
-            "address_province": "Province",
+            "address_barangay": "Barangay",
         }
         for field, label in required_addr.items():
             if not form[field]:
                 flash(f"{label} is required.", "error")
                 return render_template("public/signup.html", form=form)
+        # Province is required for everywhere except NCR (which has no
+        # provinces in PSGC).
+        if "ncr" not in form["address_region"].lower() and not form["address_province"]:
+            flash("Province is required.", "error")
+            return render_template("public/signup.html", form=form)
         if form["address_zip"] and not (form["address_zip"].isdigit() and len(form["address_zip"]) == 4):
             flash("ZIP code must be 4 digits.", "error")
             return render_template("public/signup.html", form=form)
@@ -243,9 +278,10 @@ def signup():
                 "address_house_no": form["address_house_no"] or None,
                 "address_street":   form["address_street"] or None,
                 "address_purok":    form["address_purok"] or None,
-                "address_barangay": form["address_barangay"] or None,
-                "address_city":     form["address_city"] or None,
+                "address_region":   form["address_region"] or None,
                 "address_province": form["address_province"] or None,
+                "address_city":     form["address_city"] or None,
+                "address_barangay": form["address_barangay"] or None,
                 "address_zip":      form["address_zip"] or None,
                 "role":           "student",
                 "email_verified": False,
