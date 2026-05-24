@@ -1,0 +1,2 @@
+/* Project-specific tweaks layered on top of Tailwind. */
+html { scroll-behavior: smooth; }
