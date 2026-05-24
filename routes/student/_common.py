@@ -64,7 +64,7 @@ YEAR_LABELS = {y: label for opts in YEAR_OPTIONS.values() for y, label in opts}
 PDF_MIMES   = {"application/pdf"}
 IMAGE_MIMES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
 
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
 
 
 # ---------------------------------------------------------------------------

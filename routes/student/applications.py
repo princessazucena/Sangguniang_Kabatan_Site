@@ -229,6 +229,84 @@ def reset_level(app_id: int):
 # Upload + submit
 # ---------------------------------------------------------------------------
 
+# Compress big phone photos before pushing to Supabase Storage. Real IDs
+# rarely need more than ~2000 px on the long edge to stay readable.
+_IMAGE_MAX_DIM     = 2000
+_IMAGE_JPEG_QUALITY = 82
+
+
+def _compress_image(data: bytes, mime: str) -> tuple[bytes, str, str]:
+    """
+    Resize + re-encode an image so it doesn't gobble Supabase storage.
+
+    Returns ``(new_bytes, new_mime, suggested_extension)``. Falls back to
+    the original bytes if Pillow can't read it (e.g. unusual HEIC builds
+    on the server) so the upload still goes through.
+    """
+    try:
+        from io import BytesIO
+        from PIL import Image, ImageOps
+    except Exception:
+        return data, mime, ""
+
+    try:
+        img = Image.open(BytesIO(data))
+        # Honor EXIF orientation so portrait phone photos don't end up sideways.
+        img = ImageOps.exif_transpose(img)
+
+        # Drop alpha for JPEG output.
+        if img.mode in ("RGBA", "LA", "P"):
+            img = img.convert("RGB")
+        elif img.mode != "RGB":
+            img = img.convert("RGB")
+
+        img.thumbnail((_IMAGE_MAX_DIM, _IMAGE_MAX_DIM), Image.LANCZOS)
+
+        out = BytesIO()
+        img.save(out, format="JPEG",
+                 quality=_IMAGE_JPEG_QUALITY,
+                 optimize=True,
+                 progressive=True)
+        return out.getvalue(), "image/jpeg", ".jpg"
+    except Exception:
+        # If we can't process it, fall back to the original.
+        return data, mime, ""
+
+
+def _delete_existing_slot_file(sb, application_id: int, slot: str) -> None:
+    """
+    Remove the previous file for this (application, slot) — both the
+    storage object and the application_files row — so re-uploads don't
+    leave orphans in Supabase.
+    """
+    try:
+        rows = (
+            sb.table("application_files")
+            .select("id, storage_path")
+            .eq("application_id", application_id)
+            .eq("slot", slot)
+            .execute()
+        ).data or []
+        if not rows:
+            return
+        bucket = get_bucket_name()
+        paths = [r["storage_path"] for r in rows if r.get("storage_path")]
+        if paths:
+            try:
+                sb.storage.from_(bucket).remove(paths)
+            except Exception:
+                # If storage cleanup fails, still drop the rows so the
+                # student isn't blocked. The blob becomes an orphan but
+                # an admin can clean up later.
+                pass
+        sb.table("application_files").delete().in_(
+            "id", [r["id"] for r in rows]
+        ).execute()
+    except Exception:
+        # Never let cleanup failures block the new upload.
+        pass
+
+
 def _upload_one(sb, app_row, student_id, slot, file_storage):
     """Validate & store a single file; returns (ok, message)."""
     kind  = REQUIREMENT_SLOTS[slot]["kind"]
@@ -244,9 +322,23 @@ def _upload_one(sb, app_row, student_id, slot, file_storage):
     if not data:
         return False, f"{label} is empty."
     if len(data) > MAX_UPLOAD_BYTES:
-        return False, f"{label} is too large (max 10 MB)."
+        return False, f"{label} is too large (max 5 MB)."
 
     safe_name = file_storage.filename.replace("/", "_").replace("\\", "_")
+
+    # For images, compress + re-encode as JPEG before uploading. This
+    # cuts typical 4-5 MB phone photos down to ~300-700 KB without
+    # hurting readability of an ID, indigency cert, etc.
+    if kind == "image":
+        data, mime, new_ext = _compress_image(data, mime)
+        if new_ext:
+            base = safe_name.rsplit(".", 1)[0] or "photo"
+            safe_name = f"{base}{new_ext}"
+
+    # Replace any existing upload for this slot so the student doesn't
+    # accumulate dead copies in Supabase storage.
+    _delete_existing_slot_file(sb, app_row["id"], slot)
+
     storage_path = f"{student_id}/{slot}/{uuid.uuid4().hex}_{safe_name}"
 
     bucket = get_bucket_name()
