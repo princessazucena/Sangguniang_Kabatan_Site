@@ -7,6 +7,11 @@
 create table if not exists public.profiles (
     id uuid primary key references auth.users(id) on delete cascade,
     full_name text not null,
+    first_name   text,
+    middle_name  text,
+    last_name    text,
+    suffix       text,
+    facebook_url text,
     role text not null default 'student' check (role in ('student','admin')),
     created_at timestamptz not null default now()
 );

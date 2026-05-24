@@ -1,5 +1,5 @@
-{% extends "base.html" %}
-{% block title %}My Application · Scholarship Portal{% endblock %}
+{% extends "student/_layout.html" %}
+{% block title %}My Application · Sangguniang Kabataan ng Bukal Scholarship Portal{% endblock %}
 
 {% set status_styles = {
     'pending':  'bg-amber-100 text-amber-800',
@@ -7,7 +7,7 @@
     'rejected': 'bg-red-100 text-red-800',
 } %}
 
-{% block content %}
+{% block student_content %}
 <div class="grid md:grid-cols-3 gap-6">
     <section class="md:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-slate-100">
         <div class="flex items-center justify-between mb-4">
@@ -43,9 +43,9 @@
               class="border-t pt-4 flex flex-col sm:flex-row gap-3 sm:items-center">
             <input type="file" name="document" required
                    class="block text-sm file:mr-3 file:px-3 file:py-1.5 file:rounded-md
-                          file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                          file:border-0 file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100" />
             <button type="submit"
-                    class="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 text-sm font-medium">
+                    class="px-4 py-2 rounded-md bg-brand-500 text-white hover:bg-brand-600 text-sm font-medium">
                 Upload document
             </button>
         </form>

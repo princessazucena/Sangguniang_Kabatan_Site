@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "admin/_layout.html" %}
 {% block title %}Review · Admin{% endblock %}
 
 {% set status_styles = {
@@ -7,8 +7,8 @@
     'rejected': 'bg-red-100 text-red-800',
 } %}
 
-{% block content %}
-<a href="{{ url_for('admin.dashboard') }}" class="text-sm text-indigo-600 hover:underline">&larr; All applications</a>
+{% block admin_content %}
+<a href="{{ url_for('admin.dashboard') }}" class="text-sm text-brand-600 hover:underline">&larr; All applications</a>
 
 <div class="grid md:grid-cols-3 gap-6 mt-2">
     <section class="md:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-slate-100">
@@ -30,7 +30,7 @@
                         <span class="truncate">{{ f.file_name }}</span>
                         {% if f.signed_url %}
                             <a href="{{ f.signed_url }}" target="_blank"
-                               class="text-indigo-600 hover:underline">Open</a>
+                               class="text-brand-600 hover:underline">Open</a>
                         {% else %}
                             <span class="text-slate-400">link unavailable</span>
                         {% endif %}
@@ -47,7 +47,7 @@
         <form method="post" action="{{ url_for('admin.decide', app_id=app.id) }}" class="space-y-3">
             <textarea name="notes" rows="4"
                       placeholder="Notes for the student (optional)"
-                      class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ app.notes or '' }}</textarea>
+                      class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">{{ app.notes or '' }}</textarea>
             <div class="flex gap-2">
                 <button name="decision" value="verified"
                         class="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm py-2 rounded-md">

@@ -1,0 +1,60 @@
+{# Fixed notification button shown on student/admin pages.
+   The dropdown panel is a placeholder; wire actual notifications later. #}
+<div class="fixed top-4 right-4 z-50">
+    <div class="relative" id="notif-root">
+        <button type="button" id="notif-button"
+                class="relative inline-flex items-center justify-center w-11 h-11 rounded-full bg-white shadow-lg border border-slate-200 text-slate-700 hover:text-brand-700 hover:bg-brand-50"
+                aria-haspopup="true" aria-expanded="false" aria-label="Notifications">
+            <i class="fa-solid fa-bell"></i>
+            {# Unread badge — toggle the `hidden` class when there are no notifications. #}
+            <span id="notif-badge"
+                  class="hidden absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
+                0
+            </span>
+        </button>
+
+        <div id="notif-panel"
+             class="hidden absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden">
+            <div class="px-4 py-3 border-b flex items-center justify-between">
+                <span class="font-semibold text-sm">Notifications</span>
+                <button type="button" id="notif-close" class="text-slate-400 hover:text-slate-600" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="max-h-80 overflow-y-auto divide-y divide-slate-100" id="notif-list">
+                <p class="px-4 py-6 text-sm text-slate-500 text-center">You're all caught up.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const root   = document.getElementById('notif-root');
+    const btn    = document.getElementById('notif-button');
+    const panel  = document.getElementById('notif-panel');
+    const closeB = document.getElementById('notif-close');
+    if (!root || !btn || !panel) return;
+
+    function open() {
+        panel.classList.remove('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+    }
+    function close() {
+        panel.classList.add('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+    }
+    function toggle() {
+        panel.classList.contains('hidden') ? open() : close();
+    }
+
+    btn.addEventListener('click', (e) => { e.stopPropagation(); toggle(); });
+    closeB && closeB.addEventListener('click', close);
+    document.addEventListener('click', (e) => {
+        if (!root.contains(e.target)) close();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') close();
+    });
+})();
+</script>

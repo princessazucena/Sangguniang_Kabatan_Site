@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{# Sidebar layout for admin pages.
+   Pages should override `admin_content` instead of `content`. #}
+
+{% block content %}
+<div class="md:grid md:grid-cols-[16rem_1fr] md:gap-6">
+
+    {# ----- Mobile top bar ----- #}
+    <div class="md:hidden flex items-center justify-between mb-4">
+        <button type="button" id="admin-sidebar-toggle"
+                class="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-white border border-slate-200 text-slate-700"
+                aria-controls="admin-sidebar" aria-expanded="false">
+            <i class="fa-solid fa-bars"></i>
+            <span class="text-sm font-medium">Menu</span>
+        </button>
+        <span class="text-sm text-slate-500">Admin</span>
+    </div>
+
+    {# ----- Sidebar ----- #}
+    <div id="admin-sidebar-backdrop"
+         class="hidden fixed inset-0 bg-slate-900/40 z-30 md:hidden"></div>
+
+    <aside id="admin-sidebar"
+           class="fixed md:static inset-y-0 left-0 z-40 w-64 md:w-auto
+                  bg-white md:bg-transparent shadow-xl md:shadow-none
+                  p-4 md:p-0 overflow-y-auto
+                  transform -translate-x-full md:translate-x-0
+                  transition-transform duration-200 ease-out">
+        <div class="md:bg-white md:rounded-xl md:shadow-sm md:border md:border-slate-100 md:p-4 md:sticky md:top-4">
+            <div class="flex items-center justify-between mb-4 md:mb-3">
+                <span class="text-xs uppercase tracking-wide text-slate-500">Admin menu</span>
+                <button type="button" id="admin-sidebar-close"
+                        class="md:hidden text-slate-500 hover:text-slate-700"
+                        aria-label="Close menu">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            {% set nav_base = "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium" %}
+            {% set nav_active = "bg-brand-50 text-brand-700" %}
+            {% set nav_idle = "text-slate-700 hover:bg-slate-100" %}
+
+            <nav class="space-y-1">
+                <a href="{{ url_for('admin.dashboard') }}"
+                   class="{{ nav_base }} {% if request.endpoint in ['admin.dashboard', 'admin.review'] %}{{ nav_active }}{% else %}{{ nav_idle }}{% endif %}">
+                    <i class="fa-solid fa-folder-open w-5 text-center"></i>
+                    <span>Applications</span>
+                </a>
+                <a href="{{ url_for('admin.announcements') }}"
+                   class="{{ nav_base }} {% if request.endpoint == 'admin.announcements' %}{{ nav_active }}{% else %}{{ nav_idle }}{% endif %}">
+                    <i class="fa-solid fa-bullhorn w-5 text-center"></i>
+                    <span>Announcements</span>
+                </a>
+                <a href="{{ url_for('public.home') }}"
+                   class="{{ nav_base }} {{ nav_idle }}">
+                    <i class="fa-solid fa-house w-5 text-center"></i>
+                    <span>Public site</span>
+                </a>
+                <a href="{{ url_for('public.logout') }}"
+                   class="{{ nav_base }} text-red-600 hover:bg-red-50">
+                    <i class="fa-solid fa-right-from-bracket w-5 text-center"></i>
+                    <span>Log out</span>
+                </a>
+            </nav>
+        </div>
+    </aside>
+
+    {# ----- Main content ----- #}
+    <div class="min-w-0">
+        {% block admin_content %}{% endblock %}
+    </div>
+</div>
+
+{% include "_notification_button.html" %}
+
+<script>
+(function () {
+    const toggle   = document.getElementById('admin-sidebar-toggle');
+    const closeBtn = document.getElementById('admin-sidebar-close');
+    const sidebar  = document.getElementById('admin-sidebar');
+    const backdrop = document.getElementById('admin-sidebar-backdrop');
+    if (!toggle || !sidebar || !backdrop) return;
+
+    function open() {
+        sidebar.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+        toggle.setAttribute('aria-expanded', 'true');
+    }
+    function close() {
+        sidebar.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+        toggle.setAttribute('aria-expanded', 'false');
+    }
+
+    toggle.addEventListener('click', open);
+    closeBtn && closeBtn.addEventListener('click', close);
+    backdrop.addEventListener('click', close);
+})();
+</script>
+{% endblock %}

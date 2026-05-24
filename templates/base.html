@@ -3,32 +3,55 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{% block title %}Scholarship Portal{% endblock %}</title>
+    <title>{% block title %}Sangguniang Kabataan ng Bukal Scholarship Portal{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Brand palette built from the logo green (#84B179).
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50:  '#f1f7ef',
+                            100: '#e0eedb',
+                            200: '#c3deb9',
+                            300: '#a4cd95',
+                            400: '#84b179',  // base brand color
+                            500: '#6f9d63',
+                            600: '#5a8550',
+                            700: '#476a40',
+                            800: '#365031',
+                            900: '#283b25',
+                        }
+                    }
+                }
+            }
+        };
+    </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+          referrerpolicy="no-referrer" />
 </head>
-<body class="min-h-screen bg-slate-50 text-slate-800">
-    <header class="bg-white shadow-sm">
+<body class="min-h-screen bg-slate-50 text-slate-800 overflow-x-hidden">
+    <header class="bg-white shadow-sm border-b-4 border-brand-400">
         <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
             <a href="{{ url_for('public.home') }}" class="flex items-center gap-2">
                 <img src="{{ url_for('static', filename='images/411138383_122115055322131251_5783589540994116709_n.jpg') }}"
                      alt="Logo" class="h-9 w-auto rounded-md object-cover" />
-                <span class="font-semibold text-lg">Scholarship Portal</span>
+                <span class="font-semibold text-lg text-brand-700 leading-tight">Sangguniang Kabataan ng Bukal<br/><span class="text-sm font-medium text-brand-600">Scholarship Portal</span></span>
             </a>
             <nav class="flex items-center gap-4 text-sm">
-                <a href="{{ url_for('public.home') }}" class="hover:text-indigo-600">Announcements</a>
+                <a href="{{ url_for('public.home') }}" class="hover:text-brand-600">Announcements</a>
                 {% if session.get('role') == 'student' %}
-                    <a href="{{ url_for('student.dashboard') }}" class="hover:text-indigo-600">My Application</a>
-                    <span class="text-slate-500">Hi, {{ session.get('full_name') }}</span>
-                    <a href="{{ url_for('public.logout') }}" class="px-3 py-1.5 rounded-md bg-slate-200 hover:bg-slate-300">Log out</a>
+                    <span class="hidden sm:inline text-slate-500">Hi, {{ session.get('full_name') }}</span>
                 {% elif session.get('role') == 'admin' %}
-                    <a href="{{ url_for('admin.dashboard') }}" class="hover:text-indigo-600">Applications</a>
-                    <a href="{{ url_for('admin.announcements') }}" class="hover:text-indigo-600">Announcements</a>
-                    <span class="text-slate-500">Admin: {{ session.get('full_name') }}</span>
-                    <a href="{{ url_for('public.logout') }}" class="px-3 py-1.5 rounded-md bg-slate-200 hover:bg-slate-300">Log out</a>
+                    <span class="hidden sm:inline text-slate-500">Admin: {{ session.get('full_name') }}</span>
                 {% else %}
-                    <a href="{{ url_for('public.login') }}" class="hover:text-indigo-600">Log in</a>
-                    <a href="{{ url_for('public.signup') }}" class="px-3 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">Sign up</a>
+                    <a href="{{ url_for('public.login') }}"
+                       class="inline-flex items-center justify-center w-9 h-9 rounded-md bg-brand-500 text-white hover:bg-brand-600"
+                       title="Log in" aria-label="Log in">
+                        <i class="fa-solid fa-right-to-bracket"></i>
+                    </a>
                 {% endif %}
             </nav>
         </div>
@@ -49,12 +72,38 @@
         {% endif %}
     {% endwith %}
 
+    {% block hero %}{% endblock %}
+
     <main class="max-w-6xl mx-auto px-4 py-8">
         {% block content %}{% endblock %}
     </main>
 
     <footer class="text-center text-xs text-slate-500 py-6">
-        &copy; {{ 2026 }} Scholarship Portal
+        &copy; {{ 2026 }} Sangguniang Kabataan ng Bukal Scholarship Portal
     </footer>
+
+    {# Global password show/hide toggle. Any button with [data-password-toggle]
+       toggles the type of the input it sits next to inside .password-field. #}
+    <script>
+    (function () {
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-password-toggle]');
+            if (!btn) return;
+            const wrapper = btn.closest('.password-field');
+            if (!wrapper) return;
+            const input = wrapper.querySelector('input');
+            const icon  = btn.querySelector('i');
+            if (!input) return;
+            const showing = input.type === 'text';
+            input.type = showing ? 'password' : 'text';
+            btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+            btn.setAttribute('aria-pressed', showing ? 'false' : 'true');
+            if (icon) {
+                icon.classList.toggle('fa-eye', showing);
+                icon.classList.toggle('fa-eye-slash', !showing);
+            }
+        });
+    })();
+    </script>
 </body>
 </html>
