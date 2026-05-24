@@ -43,12 +43,12 @@
                             </div>
                             <h2 class="font-semibold text-slate-800">{{ a.title }}</h2>
                         </div>
-                        <time class="text-xs text-slate-500 whitespace-nowrap">{{ a.created_at[:10] }}</time>
+                        <time class="text-xs text-slate-500 whitespace-nowrap">{{ a.created_at | ph_date }}</time>
                     </div>
                     {% if a.start_at and a.end_at %}
                         <p class="text-xs text-slate-500 mt-1">
                             <i class="fa-regular fa-calendar mr-1"></i>
-                            {{ a.start_at[:16] | replace('T', ' ') }} → {{ a.end_at[:16] | replace('T', ' ') }}
+                            {{ a.start_at | ph }} → {{ a.end_at | ph }}
                         </p>
                     {% endif %}
                     <p class="mt-2 text-sm text-slate-700 whitespace-pre-line leading-relaxed">{{ a.body }}</p>
@@ -63,7 +63,7 @@
                             {% elif a.status == 'upcoming' %}
                                 <button type="button" disabled
                                         class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-200 text-slate-500 text-sm font-medium cursor-not-allowed">
-                                    <i class="fa-regular fa-clock"></i> Opens {{ a.start_at[:10] }}
+                                    <i class="fa-regular fa-clock"></i> Opens {{ a.start_at | ph_date }}
                                 </button>
                             {% else %}
                                 <button type="button" disabled
@@ -90,7 +90,7 @@
                             {% elif a.status == 'upcoming' %}
                                 <button type="button" disabled
                                         class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-200 text-slate-500 text-sm font-medium cursor-not-allowed">
-                                    <i class="fa-regular fa-clock"></i> Opens {{ a.start_at[:10] }}
+                                    <i class="fa-regular fa-clock"></i> Opens {{ a.start_at | ph_date }}
                                 </button>
                             {% else %}
                                 <button type="button" disabled

@@ -2,7 +2,7 @@
 Admin routes: dashboard, application review, announcements + joiners.
 """
 import io
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from functools import wraps
 
 from flask import (
@@ -15,6 +15,9 @@ from services.announcements import (
     CATEGORIES, CATEGORY_LABELS, annotate, schedule_status,
 )
 from services.print_packet import build_packet
+
+# Philippine time is UTC+8 with no DST changes.
+PH_TZ = timezone(timedelta(hours=8))
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -30,16 +33,16 @@ def admin_required(view):
 
 
 def _parse_dt_local(value: str):
-    """Parse an HTML datetime-local string into a UTC ISO timestamp.
-    Treats the input as the local timezone of the server clock."""
+    """Parse an HTML datetime-local string as Philippine time (UTC+8)
+    and return a UTC ISO timestamp string for storage."""
     if not value:
         return None
     try:
         # datetime-local format: YYYY-MM-DDTHH:MM (no tz)
         dt = datetime.fromisoformat(value)
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt.isoformat()
+            dt = dt.replace(tzinfo=PH_TZ)
+        return dt.astimezone(timezone.utc).isoformat()
     except ValueError:
         return None
 

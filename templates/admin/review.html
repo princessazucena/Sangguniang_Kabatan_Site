@@ -28,7 +28,7 @@
                 {{ app.status }}
             </span>
         </div>
-        <p class="text-sm text-slate-500 mt-1">Submitted {{ app.created_at[:10] }}</p>
+        <p class="text-sm text-slate-500 mt-1">Submitted {{ app.created_at | ph_date }}</p>
 
         <div class="mt-5 flex items-center justify-between gap-2 flex-wrap">
             <h2 class="font-semibold">Uploaded documents</h2>

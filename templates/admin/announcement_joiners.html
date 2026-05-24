@@ -23,7 +23,7 @@
         {% if announcement.start_at and announcement.end_at %}
             <p class="text-xs text-slate-500 mt-1">
                 <i class="fa-regular fa-calendar mr-1"></i>
-                {{ announcement.start_at[:16] | replace('T', ' ') }} → {{ announcement.end_at[:16] | replace('T', ' ') }}
+                {{ announcement.start_at | ph }} → {{ announcement.end_at | ph }}
             </p>
         {% endif %}
         <p class="mt-2 text-sm text-slate-700 whitespace-pre-line">{{ announcement.body }}</p>
@@ -31,17 +31,19 @@
 
     <h2 class="font-semibold mt-4 mb-2">Joiners ({{ joins | length }})</h2>
     {% if joins %}
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto max-h-[36rem] overflow-y-auto rounded-md border border-slate-100">
             <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-slate-600 text-left">
+                <thead class="bg-slate-50 text-slate-600 text-left sticky top-0 z-10">
                     <tr>
                         <th class="px-3 py-2">Student</th>
                         <th class="px-3 py-2">Joined</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-slate-100"
+                       data-paginate data-page-size="15"
+                       data-pagination-into="#joiners-pagination">
                     {% for j in joins %}
-                        <tr>
+                        <tr data-page-item>
                             <td class="px-3 py-2">{{ j.student.full_name if j.student else '—' }}</td>
                             <td class="px-3 py-2 text-slate-500">{{ j.joined_at[:16] | replace('T', ' ') }}</td>
                         </tr>
@@ -49,6 +51,7 @@
                 </tbody>
             </table>
         </div>
+        <div id="joiners-pagination"></div>
     {% else %}
         <p class="text-sm text-slate-500">Wala pang sumasali.</p>
     {% endif %}
