@@ -82,6 +82,48 @@
                         {{ (app.student.created_at | ph_date) if app.student and app.student.created_at else '—' }}
                     </dd>
                 </div>
+                {# Address — show as one readable line and break down per field. #}
+                {% set s = app.student or {} %}
+                {% set addr_parts = [
+                    s.address_house_no, s.address_street, s.address_purok,
+                    s.address_barangay, s.address_city, s.address_province, s.address_zip
+                ] | select | list %}
+                <div class="sm:col-span-2">
+                    <dt class="text-xs font-medium text-slate-500">Home address</dt>
+                    <dd class="text-slate-800">
+                        {% if addr_parts %}
+                            {{ addr_parts | join(', ') }}
+                        {% else %}—{% endif %}
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-slate-500">House / Lot / Block</dt>
+                    <dd class="text-slate-800">{{ s.address_house_no or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-slate-500">Street</dt>
+                    <dd class="text-slate-800">{{ s.address_street or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-slate-500">Purok / Sitio</dt>
+                    <dd class="text-slate-800">{{ s.address_purok or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-slate-500">Barangay</dt>
+                    <dd class="text-slate-800">{{ s.address_barangay or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-slate-500">City / Municipality</dt>
+                    <dd class="text-slate-800">{{ s.address_city or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-slate-500">Province</dt>
+                    <dd class="text-slate-800">{{ s.address_province or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-slate-500">ZIP code</dt>
+                    <dd class="text-slate-800">{{ s.address_zip or '—' }}</dd>
+                </div>
             </dl>
         </div>
 

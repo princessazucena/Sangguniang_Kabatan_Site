@@ -278,10 +278,10 @@
         new Chart(trendCtx, {
             type: 'line',
             data: {
-                labels: {{ trend_chart.labels | tojson }},
+                labels: {{ trend_chart.categories | tojson }},
                 datasets: [{
                     label: 'Submissions',
-                    data: {{ trend_chart.values | tojson }},
+                    data: {{ trend_chart.series | tojson }},
                     borderColor: palette.brand,
                     backgroundColor: 'rgba(111, 157, 99, 0.18)',
                     borderWidth: 2,
@@ -309,9 +309,9 @@
         new Chart(statusCtx, {
             type: 'doughnut',
             data: {
-                labels: {{ status_chart.labels | tojson }},
+                labels: {{ status_chart.categories | tojson }},
                 datasets: [{
-                    data: {{ status_chart.values | tojson }},
+                    data: {{ status_chart.series | tojson }},
                     backgroundColor: [palette.amber, palette.green, palette.red],
                     borderWidth: 0,
                 }],
@@ -333,10 +333,10 @@
         new Chart(levelCtx, {
             type: 'bar',
             data: {
-                labels: {{ level_chart.labels | tojson }},
+                labels: {{ level_chart.categories | tojson }},
                 datasets: [{
                     label: 'Applications',
-                    data: {{ level_chart.values | tojson }},
+                    data: {{ level_chart.series | tojson }},
                     backgroundColor: palette.brand,
                     borderRadius: 4,
                 }],
@@ -359,10 +359,10 @@
         new Chart(yearCtx, {
             type: 'bar',
             data: {
-                labels: {{ year_chart.labels | tojson }},
+                labels: {{ year_chart.categories | tojson }},
                 datasets: [{
                     label: 'Applications',
-                    data: {{ year_chart.values | tojson }},
+                    data: {{ year_chart.series | tojson }},
                     backgroundColor: palette.blue,
                     borderRadius: 4,
                 }],
@@ -385,9 +385,9 @@
         new Chart(catCtx, {
             type: 'pie',
             data: {
-                labels: {{ category_chart.labels | tojson }},
+                labels: {{ category_chart.categories | tojson }},
                 datasets: [{
-                    data: {{ category_chart.values | tojson }},
+                    data: {{ category_chart.series | tojson }},
                     backgroundColor: [palette.brand, palette.blue, palette.purple, palette.slate, palette.amber],
                     borderWidth: 0,
                 }],
@@ -408,10 +408,10 @@
         new Chart(topCtx, {
             type: 'bar',
             data: {
-                labels: {{ top_events_chart.labels | tojson }},
+                labels: {{ top_events_chart.categories | tojson }},
                 datasets: [{
                     label: 'Joiners',
-                    data: {{ top_events_chart.values | tojson }},
+                    data: {{ top_events_chart.series | tojson }},
                     backgroundColor: palette.purple,
                     borderRadius: 4,
                 }],

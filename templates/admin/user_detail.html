@@ -95,6 +95,50 @@
             </div>
         </div>
 
+        {# Address — captured at sign-up #}
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+            <header class="mb-4">
+                <h2 class="font-semibold text-lg">Home address</h2>
+            </header>
+            <div class="grid sm:grid-cols-3 gap-4 text-sm">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">House / Lot / Block</label>
+                    <input type="text" value="{{ student.address_house_no or '—' }}" readonly
+                           class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Street</label>
+                    <input type="text" value="{{ student.address_street or '—' }}" readonly
+                           class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Purok / Sitio</label>
+                    <input type="text" value="{{ student.address_purok or '—' }}" readonly
+                           class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Barangay</label>
+                    <input type="text" value="{{ student.address_barangay or '—' }}" readonly
+                           class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">City / Municipality</label>
+                    <input type="text" value="{{ student.address_city or '—' }}" readonly
+                           class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Province</label>
+                    <input type="text" value="{{ student.address_province or '—' }}" readonly
+                           class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">ZIP code</label>
+                    <input type="text" value="{{ student.address_zip or '—' }}" readonly
+                           class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700" />
+                </div>
+            </div>
+        </div>
+
         {# Application history #}
         <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
             <header class="flex items-center justify-between gap-3 mb-4 flex-wrap">

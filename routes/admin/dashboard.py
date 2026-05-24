@@ -169,30 +169,31 @@ def dashboard():
         announcements_total=len(announcements),
         events_total=len(joinable_announcements),
         joiners_total=sum(join_per_anc.values()),
-        # data for charts
+        # data for charts (use neutral key names so they don't clash with
+        # built-in dict methods when accessed as `chart.values` in Jinja)
         status_chart={
-            "labels": ["Pending", "Verified", "Rejected"],
-            "values": [pending_count, verified_count, rejected_count],
+            "categories": ["Pending", "Verified", "Rejected"],
+            "series":     [pending_count, verified_count, rejected_count],
         },
         level_chart={
-            "labels": list(level_counts.keys()),
-            "values": list(level_counts.values()),
+            "categories": list(level_counts.keys()),
+            "series":     list(level_counts.values()),
         },
         year_chart={
-            "labels": list(year_counts.keys()),
-            "values": list(year_counts.values()),
+            "categories": list(year_counts.keys()),
+            "series":     list(year_counts.values()),
         },
         trend_chart={
-            "labels": trend_labels,
-            "values": trend_values,
+            "categories": trend_labels,
+            "series":     trend_values,
         },
         category_chart={
-            "labels": [c.replace("_", " ").title() for c in cat_counts.keys()],
-            "values": list(cat_counts.values()),
+            "categories": [c.replace("_", " ").title() for c in cat_counts.keys()],
+            "series":     list(cat_counts.values()),
         },
         top_events_chart={
-            "labels": [e.get("title", "")[:24] for e in top_events],
-            "values": [e.get("join_count", 0) for e in top_events],
+            "categories": [e.get("title", "")[:24] for e in top_events],
+            "series":     [e.get("join_count", 0) for e in top_events],
         },
         # lists
         recent_apps=recent_apps,

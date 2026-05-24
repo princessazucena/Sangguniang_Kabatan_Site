@@ -54,7 +54,9 @@ def _get_student_profile(sb, student_id: str) -> dict | None:
     res = (
         sb.table("profiles")
         .select("id, full_name, first_name, middle_name, last_name, suffix, "
-                "facebook_url, role, is_active, email_verified, created_at")
+                "facebook_url, role, is_active, email_verified, created_at, "
+                "address_house_no, address_street, address_purok, "
+                "address_barangay, address_city, address_province, address_zip")
         .eq("id", student_id)
         .eq("role", "student")
         .limit(1)

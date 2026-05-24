@@ -23,7 +23,9 @@ def profile():
     prof = (
         sb.table("profiles")
         .select("first_name, middle_name, last_name, suffix, full_name, "
-                "facebook_url, role, created_at")
+                "facebook_url, role, created_at, "
+                "address_house_no, address_street, address_purok, "
+                "address_barangay, address_city, address_province, address_zip")
         .eq("id", student_id)
         .single()
         .execute()

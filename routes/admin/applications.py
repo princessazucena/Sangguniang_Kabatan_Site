@@ -68,7 +68,9 @@ def review(app_id: int):
                 "education_level, year_level, "
                 "student:profiles!applications_student_id_fkey("
                 "id, full_name, first_name, middle_name, last_name, suffix, "
-                "facebook_url, created_at)")
+                "facebook_url, created_at, "
+                "address_house_no, address_street, address_purok, "
+                "address_barangay, address_city, address_province, address_zip)")
         .eq("id", app_id)
         .single()
         .execute()

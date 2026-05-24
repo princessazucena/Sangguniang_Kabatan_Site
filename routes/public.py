@@ -239,6 +239,13 @@ def signup():
                 "last_name":      form["last_name"],
                 "suffix":         form["suffix"] or None,
                 "facebook_url":   form["facebook_url"],
+                "address_house_no": form["address_house_no"] or None,
+                "address_street":   form["address_street"] or None,
+                "address_purok":    form["address_purok"] or None,
+                "address_barangay": form["address_barangay"] or None,
+                "address_city":     form["address_city"] or None,
+                "address_province": form["address_province"] or None,
+                "address_zip":      form["address_zip"] or None,
                 "role":           "student",
                 "email_verified": False,
             }).execute()
