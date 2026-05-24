@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Announcements · Scholarship Portal{% endblock %}
+
+{% set slides = [
+    'images/473265073_122186308370131251_417259699920810235_n.jpg',
+    'images/473338489_122186310134131251_7193305214024562341_n.jpg',
+    'images/473570088_122186310158131251_2841917794290302851_n.jpg',
+] %}
+
+{% block content %}
+<section id="hero-slider"
+         class="relative rounded-2xl overflow-hidden mb-8 shadow h-[420px]">
+    {% for slide in slides %}
+        <div class="slide absolute inset-0 transition-opacity duration-700
+                    {% if loop.first %}opacity-100{% else %}opacity-0{% endif %}">
+            <div class="absolute inset-0 bg-cover bg-center"
+                 style="background-image: url('{{ url_for('static', filename=slide) }}');"></div>
+            <div class="absolute inset-0 bg-gradient-to-r from-indigo-900/80 to-slate-900/40"></div>
+        </div>
+    {% endfor %}
+
+    <div class="relative h-full flex flex-col justify-center px-8 py-16 text-white">
+        <h1 class="text-3xl md:text-4xl font-bold drop-shadow">Apply for your scholarship</h1>
+        <p class="mt-2 max-w-2xl text-indigo-100 drop-shadow">
+            Submit your documents online, track your application status, and stay
+            updated through official announcements from the scholarship office.
+        </p>
+        {% if not session.get('user_id') %}
+            <div class="mt-5 flex gap-3">
+                <a href="{{ url_for('public.signup') }}"
+                   class="px-4 py-2 rounded-md bg-white text-indigo-700 font-medium hover:bg-indigo-50">
+                    Create an account
+                </a>
+                <a href="{{ url_for('public.login') }}"
+                   class="px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-500 font-medium">
+                    Log in
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+        {% for slide in slides %}
+            <button type="button"
+                    data-index="{{ loop.index0 }}"
+                    class="slide-dot w-2.5 h-2.5 rounded-full bg-white/50 hover:bg-white transition
+                           {% if loop.first %}!bg-white{% endif %}"
+                    aria-label="Go to slide {{ loop.index }}"></button>
+        {% endfor %}
+    </div>
+</section>
+
+<h2 class="text-xl font-semibold mb-4">Latest announcements</h2>
+{% if announcements %}
+    <div class="space-y-4">
+        {% for a in announcements %}
+            <article class="bg-white rounded-lg shadow-sm p-5 border border-slate-100">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-semibold text-lg">{{ a.title }}</h3>
+                    <time class="text-xs text-slate-500">{{ a.created_at[:10] }}</time>
+                </div>
+                <p class="mt-2 text-slate-700 whitespace-pre-line">{{ a.body }}</p>
+            </article>
+        {% endfor %}
+    </div>
+{% else %}
+    <p class="text-slate-500">No announcements yet. Check back later.</p>
+{% endif %}
+
+<script>
+(function () {
+    const root = document.getElementById('hero-slider');
+    if (!root) return;
+    const slides = root.querySelectorAll('.slide');
+    const dots   = root.querySelectorAll('.slide-dot');
+    let current  = 0;
+
+    function show(i) {
+        slides.forEach((s, idx) => {
+            s.style.opacity = idx === i ? '1' : '0';
+        });
+        dots.forEach((d, idx) => {
+            d.classList.toggle('!bg-white', idx === i);
+        });
+        current = i;
+    }
+
+    dots.forEach(d => d.addEventListener('click', () => {
+        show(parseInt(d.dataset.index, 10));
+    }));
+
+    setInterval(() => show((current + 1) % slides.length), 5000);
+})();
+</script>
+{% endblock %}
