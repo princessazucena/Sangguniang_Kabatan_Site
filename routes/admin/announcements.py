@@ -4,15 +4,35 @@ Admin → Announcements sidebar button.
 Create / list / delete announcements, plus the joiners list for pay-out
 announcements.
 """
-from flask import render_template, request, redirect, url_for, flash, session
+import threading
+from flask import render_template, request, redirect, url_for, flash, session, current_app
 
 from supabase_client import get_supabase
 from services.announcements import (
     CATEGORIES, CATEGORY_LABELS, JOINABLE_CATEGORIES, SCHEDULED_CATEGORIES,
     annotate, schedule_status,
 )
+from services.email import broadcast_announcement_email
 
 from ._common import admin_bp, admin_required, parse_dt_local
+
+
+def _broadcast_in_background(app, announcement: dict) -> None:
+    """Email every student about a freshly-posted announcement.
+
+    Runs in a daemon thread so the admin form submit doesn't block on a
+    slow mail provider. We push a throwaway app context so any service
+    code that calls ``current_app`` keeps working.
+    """
+    def _run():
+        with app.app_context():
+            try:
+                sb = get_supabase()
+                broadcast_announcement_email(sb, announcement)
+            except Exception:
+                # Never let a broadcast failure crash the worker thread.
+                app.logger.exception("Announcement broadcast failed")
+    threading.Thread(target=_run, daemon=True).start()
 
 
 @admin_bp.route("/announcements", methods=["GET", "POST"])
@@ -49,6 +69,25 @@ def announcements():
             "posted_by": session["user_id"],
         }).execute()
         flash("Announcement posted.", "success")
+
+        # Email every student in the background. We re-fetch the row so
+        # the broadcast uses the canonical, server-stored values
+        # (including the generated id and created_at).
+        try:
+            latest = (
+                sb.table("announcements")
+                .select("*")
+                .eq("title", title)
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            ).data or []
+            if latest:
+                _broadcast_in_background(current_app._get_current_object(), latest[0])
+        except Exception:
+            # Don't fail the admin flow if we can't kick off the email.
+            current_app.logger.exception("Could not start announcement broadcast")
+
         return redirect(url_for("admin.announcements"))
 
     items = (
