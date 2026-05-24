@@ -98,9 +98,9 @@ def send_application_decision_email(
             "<p>Good news — your scholarship application has been "
             "<strong>approved / verified</strong> by the Sangguniang "
             "Kabataan ng Bukal.</p>"
-            "<p>Bantayan mo na lang ang Announcements page sa portal "
-            "para sa schedule ng susunod na pay-out.</p>"
-            "<p>Salamat,<br/>SK ng Bukal Scholarship Portal</p>"
+            "<p>Please watch the Announcements page in the portal "
+            "for the schedule of the next pay-out.</p>"
+            "<p>Thank you,<br/>SK ng Bukal Scholarship Portal</p>"
         )
         text = (
             f"Hi {name},\n\n"
@@ -120,12 +120,12 @@ def send_application_decision_email(
             notes_text = f"\nAdmin notes:\n{notes}\n"
         html = (
             f"<p>Hi {name},</p>"
-            "<p>Pasensiya na, ang iyong scholarship application ay "
-            "<strong>nai-rehect / kailangan pang ayusin</strong>.</p>"
+            "<p>Unfortunately, your scholarship application was "
+            "<strong>rejected and needs updates</strong>.</p>"
             f"{notes_html}"
-            "<p>Mag-log in ka po sa portal at i-update ang iyong "
-            "requirements para muling marepaso ng admin.</p>"
-            "<p>Salamat,<br/>SK ng Bukal Scholarship Portal</p>"
+            "<p>Please log in to the portal and update your "
+            "requirements so an admin can review them again.</p>"
+            "<p>Thank you,<br/>SK ng Bukal Scholarship Portal</p>"
         )
         text = (
             f"Hi {name},\n\n"

@@ -63,7 +63,7 @@ def apply():
 
     open_reg = current_open_registration(sb)
     if not open_reg:
-        flash("Walang bukas na scholarship registration sa ngayon.", "error")
+        flash("There is no open scholarship registration right now.", "error")
         return redirect(url_for("student.dashboard"))
 
     # If they already applied for this window, route them to it.
@@ -88,7 +88,7 @@ def apply():
         .execute()
     )
     new_id = inserted.data[0]["id"]
-    flash("Bagong application nasimulan na. Pumili ng level at i-upload ang requirements.", "success")
+    flash("New application started. Pick your level and upload the requirements.", "success")
     return redirect(url_for("student.application", app_id=new_id))
 
 
@@ -138,6 +138,7 @@ def application(app_id: int):
         }
         for key in LEVEL_SLOTS[level]
     ]
+    is_complete = all(s["file"] for s in slots)
 
     return render_template(
         "student/application.html",
@@ -147,6 +148,7 @@ def application(app_id: int):
         year_label=YEAR_LABELS.get(app_row.get("year_level"), ""),
         window_open=window_open,
         open_registration=open_registration,
+        is_complete=is_complete,
     )
 
 
@@ -160,7 +162,7 @@ def set_level(app_id: int):
         abort(404)
 
     if not registration_window_active(app_row):
-        flash("Sarado na ang registration window para sa application na ito.", "error")
+        flash("The registration window for this application is closed.", "error")
         return redirect(url_for("student.application", app_id=app_id))
 
     level = (request.form.get("education_level") or "").strip()
@@ -194,7 +196,7 @@ def reset_level(app_id: int):
         abort(404)
 
     if not registration_window_active(app_row):
-        flash("Sarado na ang registration window para sa application na ito.", "error")
+        flash("The registration window for this application is closed.", "error")
         return redirect(url_for("student.application", app_id=app_id))
 
     sb.table("applications").update({
@@ -267,8 +269,8 @@ def submit_requirements(app_id: int):
         abort(404)
 
     if not registration_window_active(app_row):
-        flash("Sarado pa o tapos na ang scholarship registration window. "
-              "Hindi ka pwedeng mag-submit ng requirements ngayon.", "error")
+        flash("The scholarship registration window is not open. "
+              "You cannot submit requirements right now.", "error")
         return redirect(url_for("student.application", app_id=app_id))
 
     level = app_row.get("education_level")
@@ -276,28 +278,65 @@ def submit_requirements(app_id: int):
         flash("Please choose your education level first.", "error")
         return redirect(url_for("student.application", app_id=app_id))
 
+    required_slots = LEVEL_SLOTS[level]
+
+    # What's already on file for this application.
+    existing_files = (
+        sb.table("application_files")
+        .select("slot")
+        .eq("application_id", app_row["id"])
+        .execute()
+    ).data or []
+    existing_slots = {f["slot"] for f in existing_files if f.get("slot")}
+
+    # Slots the student is uploading right now in this form post.
+    incoming_slots: set[str] = set()
+    for slot in required_slots:
+        f = request.files.get(f"document_{slot}")
+        if f and f.filename:
+            incoming_slots.add(slot)
+
+    # Every required slot must either already be uploaded, or be present
+    # in this submission. Otherwise reject the whole thing — admins should
+    # only ever see complete applications.
+    final_slots = existing_slots | incoming_slots
+    missing = [s for s in required_slots if s not in final_slots]
+    if missing:
+        labels = [REQUIREMENT_SLOTS[s]["label"] for s in missing]
+        flash(
+            "You need to upload all requirements before submitting. "
+            "Still missing: " + ", ".join(labels) + ".",
+            "error",
+        )
+        return redirect(url_for("student.application", app_id=app_id))
+
     saved, errors = [], []
-    for slot in LEVEL_SLOTS[level]:
+    for slot in required_slots:
         f = request.files.get(f"document_{slot}")
         if not f or not f.filename:
             continue
         ok, msg = _upload_one(sb, app_row, student_id, slot, f)
         (saved if ok else errors).append(msg)
 
-    if not saved and not errors:
-        flash("Walang napiling file. Pumili muna ng dokumentong i-uupload.", "error")
+    if errors:
+        for err in errors:
+            flash(err, "error")
         return redirect(url_for("student.application", app_id=app_id))
 
+    # Re-open this application for review after fresh uploads.
+    if app_row["status"] != "pending":
+        sb.table("applications").update({
+            "status": "pending",
+            "reviewed_by": None,
+            "reviewed_at": None,
+        }).eq("id", app_row["id"]).execute()
+
     if saved:
-        # Re-open this application for review after fresh uploads.
-        if app_row["status"] != "pending":
-            sb.table("applications").update({
-                "status": "pending",
-                "reviewed_by": None,
-                "reviewed_at": None,
-            }).eq("id", app_row["id"]).execute()
-        flash(f"Saved: {', '.join(saved)}.", "success")
-    for err in errors:
-        flash(err, "error")
+        flash(
+            f"Submitted: {', '.join(saved)}. Sent for review.",
+            "success",
+        )
+    else:
+        flash("Application sent for review.", "success")
 
     return redirect(url_for("student.application", app_id=app_id))

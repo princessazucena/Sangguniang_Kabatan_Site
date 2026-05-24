@@ -16,7 +16,11 @@ from supabase_client import get_supabase, get_bucket_name
 from services.email import send_application_decision_email
 from services.print_packet import build_packet
 
-from ._common import admin_bp, admin_required, LEVEL_LABELS, YEAR_LABELS, SLOT_LABELS
+from ._common import (
+    admin_bp, admin_required,
+    LEVEL_LABELS, YEAR_LABELS, SLOT_LABELS, LEVEL_SLOTS,
+    submitted_application_ids,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -27,17 +31,25 @@ from ._common import admin_bp, admin_required, LEVEL_LABELS, YEAR_LABELS, SLOT_L
 @admin_required
 def dashboard():
     sb = get_supabase()
-    apps = (
-        sb.table("applications")
-        .select("id, status, created_at, reviewed_at, notes, "
-                "student:profiles!applications_student_id_fkey(id, full_name)")
-        .order("created_at", desc=True)
-        .execute()
-    ).data or []
+
+    # Only show applications the student has fully submitted: education
+    # level chosen *and* a file uploaded for every required slot.
+    complete_ids = submitted_application_ids(sb)
 
     counts = {"pending": 0, "verified": 0, "rejected": 0}
-    for a in apps:
-        counts[a["status"]] = counts.get(a["status"], 0) + 1
+    apps: list[dict] = []
+    if complete_ids:
+        apps = (
+            sb.table("applications")
+            .select("id, status, created_at, reviewed_at, notes, "
+                    "student:profiles!applications_student_id_fkey(id, full_name)")
+            .in_("id", list(complete_ids))
+            .order("created_at", desc=True)
+            .execute()
+        ).data or []
+
+        for a in apps:
+            counts[a["status"]] = counts.get(a["status"], 0) + 1
 
     return render_template("admin/dashboard.html", applications=apps, counts=counts)
 
@@ -69,6 +81,11 @@ def review(app_id: int):
         .order("uploaded_at", desc=True)
         .execute()
     ).data or []
+
+    # Hide applications the student hasn't fully submitted yet.
+    if app_id not in submitted_application_ids(sb, [app_id]):
+        flash("This student has not completed their requirements yet.", "error")
+        return redirect(url_for("admin.dashboard"))
 
     bucket = get_bucket_name()
     for f in files:

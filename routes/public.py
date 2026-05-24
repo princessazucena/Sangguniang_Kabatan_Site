@@ -390,7 +390,7 @@ def login():
         # ``is_active`` defaults to True; treat missing values as active so
         # legacy rows still work before the migration runs.
         if prof.data.get("is_active") is False:
-            flash("Naka-deactivate ang iyong account. Mag-message sa admin.", "error")
+            flash("Your account is deactivated. Please contact the admin.", "error")
             return render_template("public/login.html", next=next_url)
 
         session.clear()

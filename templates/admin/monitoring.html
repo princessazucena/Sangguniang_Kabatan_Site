@@ -46,14 +46,14 @@
             {% endfor %}
         </ul>
     {% else %}
-        <p class="text-sm text-slate-500">Walang data pa.</p>
+        <p class="text-sm text-slate-500">No data yet.</p>
     {% endif %}
 {% endmacro %}
 
 {% block admin_content %}
 <div class="mb-5">
     <h1 class="text-2xl font-bold text-brand-700">Monitoring</h1>
-    <p class="text-sm text-slate-500">Buod ng mga verified scholars at pay-out participation.</p>
+    <p class="text-sm text-slate-500">Summary of verified scholars and pay-out participation.</p>
 </div>
 
 {# ---------- Tab switcher ---------- #}
@@ -136,7 +136,7 @@
             </div>
             <div id="scholars-pagination"></div>
         {% else %}
-            <p class="px-5 py-8 text-slate-500 text-sm text-center">Wala pang verified na scholar.</p>
+            <p class="px-5 py-8 text-slate-500 text-sm text-center">No verified scholars yet.</p>
         {% endif %}
     </div>
 </section>
@@ -190,7 +190,7 @@
                 {% endfor %}
             </ul>
         {% else %}
-            <p class="px-5 py-8 text-slate-500 text-sm text-center">Wala pang pay-out na announcement.</p>
+            <p class="px-5 py-8 text-slate-500 text-sm text-center">No pay-out announcements yet.</p>
         {% endif %}
     </div>
 </section>

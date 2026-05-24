@@ -14,16 +14,16 @@
     <div class="mb-4 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-sm flex items-start gap-3">
         <i class="fa-solid fa-lock mt-0.5"></i>
         <div>
-            <p class="font-semibold">Sarado na ang registration window para sa application na ito.</p>
-            <p>Hindi mo na pwedeng baguhin ang application na ito.</p>
+            <p class="font-semibold">The registration window for this application is closed.</p>
+            <p>You can no longer change this application.</p>
         </div>
     </div>
 {% endif %}
 <section class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-slate-100 max-w-2xl">
     <h1 class="text-lg sm:text-2xl font-bold mb-1">Tell us about your studies</h1>
     <p class="text-xs sm:text-sm text-slate-500 mb-4 sm:mb-5">
-        Pumili ng iyong education level at kasalukuyang year. Magbabago ang
-        kakailanganing dokumento depende sa pipiliin mo.
+        Pick your education level and current year. The required documents
+        change depending on what you choose.
     </p>
 
     <form method="post" action="{{ url_for('student.set_level', app_id=application.id) }}"

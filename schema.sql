@@ -21,7 +21,7 @@ create table if not exists public.announcements (
     id bigserial primary key,
     title text not null,
     body text not null,
-    category text check (category in ('registration','payout','general')),
+    category text check (category in ('registration','payout','kk_assembly','general')),
     start_at timestamptz,
     end_at   timestamptz,
     posted_by uuid references public.profiles(id) on delete set null,

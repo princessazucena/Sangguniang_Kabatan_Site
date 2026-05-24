@@ -56,7 +56,7 @@ def join_payout(anc_id: int):
         return redirect(url_for("student.announcements"))
 
     if schedule_status(anc) != "open":
-        flash("Hindi pa o tapos na ang join window para sa announcement na ito.", "error")
+        flash("The join window for this announcement is not open.", "error")
         return redirect(url_for("student.announcements"))
 
     student_id = session["user_id"]

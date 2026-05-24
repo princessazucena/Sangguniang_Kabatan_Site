@@ -74,3 +74,54 @@ SLOT_LABELS = {
     "indigency": "Certificate of Indigency",
     "psa":       "PSA Birth Certificate",
 }
+
+# Required slots per education level. Mirrors student/_common.LEVEL_SLOTS so
+# the admin can decide whether an application has been fully submitted
+# without importing across blueprints.
+LEVEL_SLOTS = {
+    "senior_high": ["card", "id", "indigency", "psa"],
+    "college":     ["cor", "id", "indigency", "psa"],
+}
+
+
+def submitted_application_ids(sb, app_ids: list[int] | None = None) -> set[int]:
+    """
+    Return the ids of applications that are fully submitted — meaning the
+    student has chosen an education level *and* uploaded a file for every
+    required slot for that level.
+
+    Pass ``app_ids`` to scope the check to a known set; otherwise this
+    walks every application in the database.
+    """
+    if app_ids is not None and not app_ids:
+        return set()
+
+    q = sb.table("applications").select("id, education_level")
+    if app_ids is not None:
+        q = q.in_("id", app_ids)
+    apps = q.execute().data or []
+    apps = [a for a in apps if a.get("education_level") in LEVEL_SLOTS]
+    if not apps:
+        return set()
+
+    ids = [a["id"] for a in apps]
+    files = (
+        sb.table("application_files")
+        .select("application_id, slot")
+        .in_("application_id", ids)
+        .execute()
+    ).data or []
+
+    slots_by_app: dict[int, set[str]] = {}
+    for f in files:
+        aid  = f.get("application_id")
+        slot = f.get("slot")
+        if aid and slot:
+            slots_by_app.setdefault(aid, set()).add(slot)
+
+    complete: set[int] = set()
+    for a in apps:
+        required = set(LEVEL_SLOTS[a["education_level"]])
+        if required.issubset(slots_by_app.get(a["id"], set())):
+            complete.add(a["id"])
+    return complete

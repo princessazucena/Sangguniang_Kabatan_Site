@@ -128,7 +128,7 @@
                     {% endfor %}
                 </ul>
             {% else %}
-                <p class="text-sm text-slate-500">Wala pang application.</p>
+                <p class="text-sm text-slate-500">No applications yet.</p>
             {% endif %}
         </div>
 
@@ -154,7 +154,7 @@
                     {% endfor %}
                 </ul>
             {% else %}
-                <p class="text-sm text-slate-500">Wala pang pay-out na sinalihan.</p>
+                <p class="text-sm text-slate-500">No pay-outs joined yet.</p>
             {% endif %}
         </div>
     </section>
@@ -164,14 +164,14 @@
         <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 lg:sticky lg:top-24">
             <h2 class="font-semibold text-lg mb-2">Account actions</h2>
             <p class="text-xs text-slate-500 mb-4">
-                Deactivating blocks login but keeps history. Deleting wipes everything — hindi na pwedeng ibalik.
+                Deactivating blocks login but keeps history. Deleting wipes everything — this cannot be undone.
             </p>
 
             <form method="post" action="{{ url_for('admin.user_set_status', student_id=student.id) }}" class="mb-3">
                 {% if student.is_active %}
                     <input type="hidden" name="action" value="deactivate" />
                     <button type="submit"
-                            onclick="return confirm('Deactivate this account? Hindi na sila pwedeng mag-login hangga\'t hindi mo i-activate ulit.');"
+                            onclick="return confirm('Deactivate this account? They will not be able to log in until you activate it again.');"
                             class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium">
                         <i class="fa-solid fa-user-slash"></i> Deactivate account
                     </button>
@@ -185,7 +185,7 @@
             </form>
 
             <form method="post" action="{{ url_for('admin.user_delete', student_id=student.id) }}"
-                  onsubmit="return confirm('Permanently delete {{ (student.full_name or 'this student') | e }}? Mawawala lahat ng applications at uploaded files. Hindi na pwedeng ibalik.');">
+                  onsubmit="return confirm('Permanently delete {{ (student.full_name or 'this student') | e }}? All applications and uploaded files will be lost. This cannot be undone.');">
                 <button type="submit"
                         class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm font-medium">
                     <i class="fa-solid fa-trash"></i> Delete account

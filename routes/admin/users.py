@@ -9,7 +9,10 @@ from flask import render_template, request, redirect, url_for, flash
 
 from supabase_client import get_supabase, get_bucket_name
 
-from ._common import admin_bp, admin_required, LEVEL_LABELS, YEAR_LABELS
+from ._common import (
+    admin_bp, admin_required, LEVEL_LABELS, YEAR_LABELS,
+    submitted_application_ids,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -83,17 +86,24 @@ def users():
     emails = _auth_emails_by_id(sb)
 
     # Application counts in one shot so we don't issue N queries.
+    # Only count fully-submitted applications (level chosen + every
+    # required slot uploaded), so empty drafts and partial uploads don't
+    # inflate the per-student count.
     app_counts: dict[str, int] = {}
     if profiles:
+        student_ids = [p["id"] for p in profiles]
         app_rows = (
             sb.table("applications")
-            .select("student_id")
-            .in_("student_id", [p["id"] for p in profiles])
+            .select("id, student_id")
+            .in_("student_id", student_ids)
             .execute()
         ).data or []
-        for r in app_rows:
-            sid = r["student_id"]
-            app_counts[sid] = app_counts.get(sid, 0) + 1
+        if app_rows:
+            complete_ids = submitted_application_ids(sb, [r["id"] for r in app_rows])
+            for r in app_rows:
+                if r["id"] in complete_ids:
+                    sid = r["student_id"]
+                    app_counts[sid] = app_counts.get(sid, 0) + 1
 
     counts = {"total": len(profiles), "active": 0, "deactivated": 0}
     for p in profiles:
@@ -159,6 +169,13 @@ def user_detail(student_id: str):
         .order("created_at", desc=True)
         .execute()
     ).data or []
+
+    # Only show applications the student has fully submitted (every
+    # required slot uploaded for the chosen level).
+    if applications:
+        complete_ids = submitted_application_ids(sb, [a["id"] for a in applications])
+        applications = [a for a in applications if a["id"] in complete_ids]
+
     for a in applications:
         a["level_label"] = LEVEL_LABELS.get(a.get("education_level"), "—")
         a["year_label"]  = YEAR_LABELS.get(a.get("year_level"), "—")
@@ -200,7 +217,7 @@ def user_set_status(student_id: str):
     sb.table("profiles").update({"is_active": new_value}).eq("id", student_id).execute()
 
     flash(
-        "Account activated." if new_value else "Account deactivated. Hindi na sila pwedeng mag-login.",
+        "Account activated." if new_value else "Account deactivated. They can no longer log in.",
         "success",
     )
     return redirect(url_for("admin.user_detail", student_id=student_id))

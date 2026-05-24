@@ -18,7 +18,7 @@
             </span>
             <div class="flex-1 min-w-0">
                 <p class="text-[11px] sm:text-xs uppercase tracking-wide text-brand-700 font-semibold">
-                    Bukas na ang registration
+                    Registration is open
                 </p>
                 <p class="font-semibold text-brand-800 truncate text-sm sm:text-base">{{ open_registration.title }}</p>
                 {% if open_registration.start_at and open_registration.end_at %}
@@ -50,10 +50,10 @@
                 <i class="fa-solid fa-lock"></i>
             </span>
             <div class="text-xs sm:text-sm text-slate-600">
-                <p class="font-semibold text-slate-800 text-sm sm:text-base">Sarado pa o tapos na ang scholarship registration.</p>
-                <p>Tingnan ang
+                <p class="font-semibold text-slate-800 text-sm sm:text-base">Scholarship registration is currently closed.</p>
+                <p>Check the
                     <a href="{{ url_for('student.announcements') }}" class="text-brand-700 underline">announcements</a>
-                    para sa susunod na registration window.</p>
+                    for the next registration window.</p>
             </div>
         </div>
     {% endif %}
@@ -104,11 +104,11 @@
         {% else %}
             <div class="px-4 py-8 text-center text-xs sm:text-sm text-slate-500">
                 <i class="fa-regular fa-folder-open text-2xl sm:text-3xl text-slate-300 mb-2 block"></i>
-                Wala ka pang application.
+                You don't have any applications yet.
                 {% if open_registration %}
-                    Pindutin ang <span class="font-semibold">Apply now</span> sa itaas para magsimula.
+                    Tap <span class="font-semibold">Apply now</span> above to get started.
                 {% else %}
-                    Maghintay ng susunod na registration window.
+                    Wait for the next registration window.
                 {% endif %}
             </div>
         {% endif %}

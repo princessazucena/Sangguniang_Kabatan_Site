@@ -91,7 +91,7 @@
         <div id="users-pagination"></div>
     {% else %}
         <p class="px-5 py-6 text-slate-500 text-sm">
-            {% if query %}Walang student na tumugma sa "{{ query }}".{% else %}No students yet.{% endif %}
+            {% if query %}No students matched "{{ query }}".{% else %}No students yet.{% endif %}
         </p>
     {% endif %}
 </section>

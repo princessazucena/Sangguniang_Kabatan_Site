@@ -101,8 +101,8 @@ def _student_status_item(sb, student_id: str) -> Optional[Dict[str, Any]]:
             "id":         f"app-{row['id']}-verified-{reviewed_at}",
             "kind":       "status",
             "title":      "Application approved",
-            "body":       "Naaprubahan na ang iyong scholarship application. "
-                          "Bantayan mo lang ang susunod na pay-out announcement.",
+            "body":       "Your scholarship application has been approved. "
+                          "Watch out for the next pay-out announcement.",
             "category":   "verified",
             "status":     "verified",
             "created_at": reviewed_at,
@@ -112,7 +112,7 @@ def _student_status_item(sb, student_id: str) -> Optional[Dict[str, Any]]:
             "tone":       "green",
         }
     # rejected
-    body = "May puna ang admin sa iyong application — pakitingnan at mag-resubmit."
+    body = "The admin left feedback on your application — please review and resubmit."
     if row.get("notes"):
         body = f"Admin notes: {_truncate(row['notes'], 200)}"
     return {

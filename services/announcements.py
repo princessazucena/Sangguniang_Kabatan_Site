@@ -6,17 +6,24 @@ Categories
 - 'registration' : students may apply / upload requirements while
                    start_at <= now <= end_at.
 - 'payout'       : students may join while start_at <= now <= end_at.
+- 'kk_assembly'  : KK assembly event students may join while
+                   start_at <= now <= end_at.
 - 'general'      : informational only.
 """
 from datetime import datetime, timezone
 from typing import Optional
 
-CATEGORIES = ("registration", "payout", "general")
+CATEGORIES = ("registration", "payout", "kk_assembly", "general")
 CATEGORY_LABELS = {
     "registration": "Scholarship Registration",
     "payout":       "Scholarship Pay Out",
+    "kk_assembly":  "KK Assembly",
     "general":      "General",
 }
+
+# Categories that need a start/end window and accept "joiners".
+JOINABLE_CATEGORIES = {"payout", "kk_assembly"}
+SCHEDULED_CATEGORIES = {"registration", "payout", "kk_assembly"}
 
 
 def _parse_ts(value) -> Optional[datetime]:
@@ -36,7 +43,7 @@ def schedule_status(row: dict, now: Optional[datetime] = None) -> str:
     Returns one of: 'upcoming', 'open', 'closed', 'unscheduled'.
     A 'general' announcement (or one missing dates) is 'unscheduled'.
     """
-    if (row.get("category") or "general") == "general":
+    if (row.get("category") or "general") not in SCHEDULED_CATEGORIES:
         return "unscheduled"
 
     start = _parse_ts(row.get("start_at"))

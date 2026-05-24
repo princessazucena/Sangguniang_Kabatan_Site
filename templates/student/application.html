@@ -20,12 +20,12 @@
     <div class="mb-3 p-3 sm:p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs sm:text-sm flex items-start gap-2 sm:gap-3">
         <i class="fa-solid fa-lock mt-0.5"></i>
         <div>
-            <p class="font-semibold">Sarado na ang registration window para sa application na ito.</p>
-            <p>Pwede mong tingnan ang naipasa, pero hindi na pwedeng baguhin.
+            <p class="font-semibold">The registration window for this application is closed.</p>
+            <p>You can view what was submitted, but you can no longer make changes.
                 {% if open_registration %}
-                    May bukas na bagong registration —
-                    <a href="{{ url_for('student.dashboard') }}" class="underline">balik sa dashboard</a>
-                    para mag-apply ulit.
+                    A new registration is open —
+                    <a href="{{ url_for('student.dashboard') }}" class="underline">go back to the dashboard</a>
+                    to apply again.
                 {% endif %}
             </p>
         </div>
@@ -34,7 +34,9 @@
 
 <form method="post"
       action="{{ url_for('student.submit_requirements', app_id=application.id) }}"
-      enctype="multipart/form-data" class="grid md:grid-cols-3 gap-4 sm:gap-6">
+      enctype="multipart/form-data"
+      data-require-complete
+      class="grid md:grid-cols-3 gap-4 sm:gap-6">
 
     <section class="md:col-span-2 space-y-3 sm:space-y-4">
         <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-slate-100">
@@ -82,9 +84,9 @@
                                 <p class="font-medium text-sm sm:text-base">{{ s.label }}</p>
                                 <p class="text-[11px] sm:text-xs text-slate-500">
                                     {% if is_image %}
-                                        Kunan ng litrato gamit ang camera, o mag-upload ng image (JPG/PNG).
+                                        Take a photo with the camera, or upload an image (JPG/PNG).
                                     {% else %}
-                                        PDF file lamang. Max 10 MB.
+                                        PDF file only. Max 10 MB.
                                     {% endif %}
                                 </p>
                                 {% if s.file %}
@@ -106,6 +108,8 @@
                         <input type="file"
                                name="document_{{ s.key }}"
                                accept="{{ accept }}"
+                               data-slot-input
+                               data-has-existing="{{ '1' if s.file else '0' }}"
                                {% if is_image %}capture="environment"{% endif %}
                                {% if not window_open %}disabled{% endif %}
                                class="block text-xs sm:text-sm w-full file:mr-2 sm:file:mr-3 file:px-2 sm:file:px-3 file:py-1 sm:file:py-1.5 file:rounded-md
@@ -117,11 +121,16 @@
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
-            <p class="text-xs sm:text-sm text-slate-600">
-                Pindutin ang <span class="font-medium">Submit</span> upang i-save ang lahat ng napiling files nang sabay-sabay.
+            <p class="text-xs sm:text-sm text-slate-600" data-submit-help>
+                {% if is_complete %}
+                    All requirements are complete. Tap <span class="font-medium">Submit</span> to send to the admin.
+                {% else %}
+                    You need to upload <span class="font-medium">all</span> requirements before submitting.
+                {% endif %}
             </p>
-            <button type="submit"
-                    {% if not window_open %}disabled{% endif %}
+            <button type="button"
+                    data-submit-button
+                    {% if not window_open or not is_complete %}disabled{% endif %}
                     class="px-4 sm:px-5 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold whitespace-nowrap
                            disabled:bg-slate-300 disabled:cursor-not-allowed">
                 <i class="fa-solid fa-paper-plane mr-1"></i>
@@ -133,11 +142,127 @@
     <aside class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-slate-100 h-fit">
         <h2 class="font-semibold mb-2 text-sm sm:text-base">What happens next?</h2>
         <ol class="list-decimal list-inside text-xs sm:text-sm text-slate-600 space-y-1">
-            <li>Pumili ng files para sa bawat requirement.</li>
-            <li>Pindutin ang Submit upang i-save lahat sabay-sabay.</li>
-            <li>Susuriin ng admin ang iyong submission.</li>
-            <li>Magbabago ang status sa <em>verified</em> o <em>rejected</em>.</li>
+            <li>Choose a file for each requirement.</li>
+            <li>Tap Submit to save them all at once.</li>
+            <li>The admin will review your submission.</li>
+            <li>The status will change to <em>verified</em> or <em>rejected</em>.</li>
         </ol>
     </aside>
+
+    {# Confirmation pop-up shown right before the application is sent. #}
+    <div id="submit-confirm-modal"
+         class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4"
+         role="dialog" aria-modal="true" aria-labelledby="submit-confirm-title">
+        <div class="absolute inset-0 bg-slate-900/60" data-confirm-close></div>
+        <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md flex flex-col overflow-hidden">
+            <div class="flex items-start gap-3 px-5 py-4 border-b">
+                <span class="w-10 h-10 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </span>
+                <div class="min-w-0">
+                    <h2 id="submit-confirm-title" class="text-base sm:text-lg font-bold text-slate-800">
+                        Submit your application?
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                        Before submitting, make sure all files are correct and clear.
+                    </p>
+                </div>
+            </div>
+            <div class="px-5 py-4 text-sm text-slate-700 space-y-3">
+                <p>
+                    Once submitted, the admin will see your application
+                    for review. You can still replace files while the
+                    registration window is open.
+                </p>
+                <ul class="text-xs sm:text-sm text-slate-600 list-disc list-inside space-y-0.5">
+                    {% for s in slots %}
+                        <li>
+                            <span class="font-medium">{{ s.label }}</span>
+                            <span class="text-slate-400">·</span>
+                            <span class="text-green-700">
+                                <i class="fa-solid fa-circle-check"></i> Ready to submit
+                            </span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="px-5 py-3 border-t flex justify-end gap-2 bg-slate-50">
+                <button type="button" data-confirm-close
+                        class="px-3 sm:px-4 py-2 rounded-md bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-sm font-medium">
+                    Cancel
+                </button>
+                <button type="button" data-confirm-submit
+                        class="px-3 sm:px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold">
+                    <i class="fa-solid fa-paper-plane mr-1"></i>
+                    Yes, submit now
+                </button>
+            </div>
+        </div>
+    </div>
 </form>
+
+{% if window_open %}
+<script>
+(function () {
+    const form = document.querySelector('form[data-require-complete]');
+    if (!form) return;
+
+    const inputs = form.querySelectorAll('[data-slot-input]');
+    const submitBtn = form.querySelector('[data-submit-button]');
+    const helpText  = form.querySelector('[data-submit-help]');
+    const modal     = document.getElementById('submit-confirm-modal');
+    if (!submitBtn) return;
+
+    const completeMsg   = 'All requirements are complete. Tap Submit to send to the admin.';
+    const incompleteMsg = 'You need to upload all requirements before submitting.';
+
+    function isComplete() {
+        let complete = true;
+        inputs.forEach(function (el) {
+            const hasExisting = el.getAttribute('data-has-existing') === '1';
+            const hasNew = el.files && el.files.length > 0;
+            if (!hasExisting && !hasNew) complete = false;
+        });
+        return complete;
+    }
+
+    function refresh() {
+        const complete = isComplete();
+        submitBtn.disabled = !complete;
+        if (helpText) helpText.textContent = complete ? completeMsg : incompleteMsg;
+    }
+
+    function openModal() {
+        if (!modal) { form.submit(); return; }
+        modal.classList.remove('hidden');
+    }
+    function closeModal() {
+        if (modal) modal.classList.add('hidden');
+    }
+
+    inputs.forEach(function (el) { el.addEventListener('change', refresh); });
+
+    submitBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (submitBtn.disabled) return;
+        openModal();
+    });
+
+    if (modal) {
+        modal.addEventListener('click', function (e) {
+            if (e.target.closest('[data-confirm-close]')) { closeModal(); return; }
+            if (e.target.closest('[data-confirm-submit]')) {
+                closeModal();
+                form.submit();
+            }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeModal();
+        });
+    }
+
+    refresh();
+})();
+</script>
+{% endif %}
 {% endblock %}
