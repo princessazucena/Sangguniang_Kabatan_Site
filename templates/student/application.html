@@ -16,7 +16,21 @@
     </a>
 </div>
 
-{% if not window_open %}
+{% set is_verified = application.status == 'verified' %}
+{% set locked = is_verified or not window_open %}
+
+{% if is_verified %}
+    <div class="mb-3 p-3 sm:p-4 rounded-xl border border-green-200 bg-green-50 text-green-800 text-xs sm:text-sm flex items-start gap-2 sm:gap-3">
+        <i class="fa-solid fa-circle-check mt-0.5"></i>
+        <div>
+            <p class="font-semibold">Your application has been verified.</p>
+            <p>Salamat! Wala ka nang kailangan i-submit dito. Bantayan mo na lang ang
+                <a href="{{ url_for('student.announcements') }}" class="underline">announcements</a>
+                para sa pay-out at iba pang updates.
+            </p>
+        </div>
+    </div>
+{% elif not window_open %}
     <div class="mb-3 p-3 sm:p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs sm:text-sm flex items-start gap-2 sm:gap-3">
         <i class="fa-solid fa-lock mt-0.5"></i>
         <div>
@@ -111,7 +125,7 @@
                                data-slot-input
                                data-has-existing="{{ '1' if s.file else '0' }}"
                                {% if is_image %}capture="environment"{% endif %}
-                               {% if not window_open %}disabled{% endif %}
+                               {% if locked %}disabled{% endif %}
                                class="block text-xs sm:text-sm w-full file:mr-2 sm:file:mr-3 file:px-2 sm:file:px-3 file:py-1 sm:file:py-1.5 file:rounded-md
                                       file:border-0 file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100
                                       disabled:opacity-60 disabled:cursor-not-allowed" />
@@ -122,7 +136,7 @@
 
         <div data-submit-card
              class="bg-white rounded-xl shadow-sm border border-slate-100 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3
-                    {% if is_complete and application.status == 'pending' %}hidden{% endif %}">
+                    {% if locked or (is_complete and application.status == 'pending') %}hidden{% endif %}">
             <p class="text-xs sm:text-sm text-slate-600" data-submit-help>
                 {% if is_complete %}
                     All requirements are complete. Tap <span class="font-medium">Submit</span> to send to the admin.
@@ -132,7 +146,7 @@
             </p>
             <button type="button"
                     data-submit-button
-                    {% if not window_open or not is_complete %}disabled{% endif %}
+                    {% if locked or not is_complete %}disabled{% endif %}
                     class="px-4 sm:px-5 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold whitespace-nowrap
                            disabled:bg-slate-300 disabled:cursor-not-allowed">
                 <i class="fa-solid fa-paper-plane mr-1"></i>
@@ -142,10 +156,12 @@
 
         {# Shown after the student has fully submitted and the admin
            hasn't decided yet. Hidden the moment they pick a replacement
-           file, so the submit button reappears. #}
+           file, so the submit button reappears. Also hidden when the
+           application is already verified — the page then has nothing
+           the student can act on. #}
         <div data-submitted-note
              class="bg-green-50 border border-green-200 rounded-xl p-3 sm:p-4 flex items-start gap-2 sm:gap-3
-                    {% if not (is_complete and application.status == 'pending') %}hidden{% endif %}">
+                    {% if is_verified or not (is_complete and application.status == 'pending') %}hidden{% endif %}">
             <span class="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center shrink-0">
                 <i class="fa-solid fa-circle-check"></i>
             </span>
@@ -220,7 +236,7 @@
     </div>
 </form>
 
-{% if window_open %}
+{% if window_open and not is_verified %}
 <script>
 (function () {
     const form = document.querySelector('form[data-require-complete]');

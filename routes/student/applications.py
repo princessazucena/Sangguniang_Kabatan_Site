@@ -273,6 +273,10 @@ def submit_requirements(app_id: int):
               "You cannot submit requirements right now.", "error")
         return redirect(url_for("student.application", app_id=app_id))
 
+    if app_row.get("status") == "verified":
+        flash("Verified na ang application mo, hindi na pwedeng baguhin.", "error")
+        return redirect(url_for("student.application", app_id=app_id))
+
     level = app_row.get("education_level")
     if not level:
         flash("Please choose your education level first.", "error")
