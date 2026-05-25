@@ -3,27 +3,27 @@ Shared helpers for announcement categories + scheduling windows.
 
 Categories
 ----------
-- 'registration' : students may apply / upload requirements while
-                   start_at <= now <= end_at.
-- 'payout'       : students may join while start_at <= now <= end_at.
-- 'kk_assembly'  : KK assembly event students may join while
-                   start_at <= now <= end_at.
-- 'general'      : informational only.
+- 'registration'        : students may apply / upload requirements while
+                          start_at <= now <= end_at.
+- 'payout'              : students may join while start_at <= now <= end_at.
+- 'general_orientation' : SK general orientation event students may join
+                          while start_at <= now <= end_at.
+- 'general'             : informational only.
 """
 from datetime import datetime, timezone
 from typing import Optional
 
-CATEGORIES = ("registration", "payout", "kk_assembly", "general")
+CATEGORIES = ("registration", "payout", "general_orientation", "general")
 CATEGORY_LABELS = {
-    "registration": "Scholarship Registration",
-    "payout":       "Scholarship Pay Out",
-    "kk_assembly":  "KK Assembly",
-    "general":      "General",
+    "registration":        "Scholarship Registration",
+    "payout":              "Scholarship Pay Out",
+    "general_orientation": "General Orientation",
+    "general":             "General",
 }
 
 # Categories that need a start/end window and accept "joiners".
-JOINABLE_CATEGORIES = {"payout", "kk_assembly"}
-SCHEDULED_CATEGORIES = {"registration", "payout", "kk_assembly"}
+JOINABLE_CATEGORIES = {"payout", "general_orientation"}
+SCHEDULED_CATEGORIES = {"registration", "payout", "general_orientation"}
 
 
 def _parse_ts(value) -> Optional[datetime]:

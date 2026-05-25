@@ -24,6 +24,23 @@
     </a>
 </div>
 
+{% if selected %}
+    <div class="mb-4 p-3 sm:p-4 rounded-xl border border-brand-200 bg-brand-50 text-brand-800 text-xs sm:text-sm flex items-start gap-2 sm:gap-3">
+        <i class="fa-solid fa-circle-check mt-0.5"></i>
+        <div class="flex-1 min-w-0">
+            <p class="font-semibold">Certificates ready for "{{ selected.title }}".</p>
+            <p>
+                {% if (selected.join_count or 0) > 0 %}
+                    {{ selected.join_count }} joiner{{ '' if selected.join_count == 1 else 's' }} eligible. Pindutin ang
+                    <span class="font-medium">Generate certificates</span> sa kanan para mabuksan ang print-ready page.
+                {% else %}
+                    Wala pang sumali sa event na ito. Lalabas ang Generate button kapag may umattend na.
+                {% endif %}
+            </p>
+        </div>
+    </div>
+{% endif %}
+
 <div class="grid lg:grid-cols-[20rem_1fr] gap-4 lg:gap-6">
     {# ---------- Event picker ---------- #}
     <section class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden h-fit">
@@ -38,7 +55,9 @@
                         <a href="{{ url_for('admin.certificates', event_id=e.id) }}"
                            class="block px-4 py-3 hover:bg-slate-50 transition {{ 'bg-brand-50' if is_selected else '' }}">
                             <div class="flex items-start gap-2 flex-wrap">
-                                <span class="text-[10px] uppercase px-2 py-0.5 rounded bg-purple-50 text-purple-700">
+                                <span class="text-[10px] uppercase px-2 py-0.5 rounded
+                                    {% if e.category == 'payout' %}bg-blue-50 text-blue-700
+                                    {% else %}bg-purple-50 text-purple-700{% endif %}">
                                     {{ category_labels.get(e.category, 'Event') }}
                                 </span>
                                 <span class="text-[10px] uppercase px-2 py-0.5 rounded {{ status_styles.get(e.status, 'bg-slate-100 text-slate-700') }}">
@@ -63,7 +82,7 @@
         {% else %}
             <div class="px-4 py-8 text-center text-sm text-slate-500">
                 <i class="fa-solid fa-people-group text-2xl text-slate-300 mb-2 block"></i>
-                Wala pang KK Assembly na napopost. Lumikha muna sa Announcements.
+                Wala pang Pay-out o General Orientation event na napost. Lumikha muna sa Announcements.
             </div>
         {% endif %}
     </section>
@@ -74,7 +93,9 @@
             <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 sm:p-5">
                 <div class="flex items-start justify-between gap-3 flex-wrap">
                     <div class="min-w-0">
-                        <span class="text-[10px] uppercase px-2 py-0.5 rounded bg-purple-50 text-purple-700">
+                        <span class="text-[10px] uppercase px-2 py-0.5 rounded
+                            {% if selected.category == 'payout' %}bg-blue-50 text-blue-700
+                            {% else %}bg-purple-50 text-purple-700{% endif %}">
                             {{ category_labels.get(selected.category, 'Event') }}
                         </span>
                         <h2 class="text-lg sm:text-xl font-bold text-slate-800 mt-1 truncate">
@@ -97,12 +118,21 @@
                             <i class="fa-solid fa-list-check"></i>
                             View joiners
                         </a>
-                        <button type="button" disabled
-                                title="Ima-implement sa susunod na hakbang"
-                                class="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-brand-500/60 text-white text-sm font-medium cursor-not-allowed">
-                            <i class="fa-solid fa-file-arrow-down"></i>
-                            Generate certificates
-                        </button>
+                        {% if (selected.join_count or 0) > 0 %}
+                            <a href="{{ url_for('admin.generate_certificates', event_id=selected.id) }}"
+                               target="_blank"
+                               class="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium">
+                                <i class="fa-solid fa-file-arrow-down"></i>
+                                Generate certificates
+                            </a>
+                        {% else %}
+                            <button type="button" disabled
+                                    title="Walang sumali pa sa event na ito"
+                                    class="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-slate-300 text-white text-sm font-medium cursor-not-allowed">
+                                <i class="fa-solid fa-file-arrow-down"></i>
+                                Generate certificates
+                            </button>
+                        {% endif %}
                     </div>
                 </div>
                 {% if selected.body %}

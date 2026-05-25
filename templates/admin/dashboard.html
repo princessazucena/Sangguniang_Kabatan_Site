@@ -167,7 +167,7 @@
         <header class="flex items-center justify-between mb-3">
             <div>
                 <h2 class="font-semibold">Top events by joiners</h2>
-                <p class="text-xs text-slate-500">Pay-outs and KK assemblies combined.</p>
+                <p class="text-xs text-slate-500">Pay-outs and General Orientation events combined.</p>
             </div>
             <i class="fa-solid fa-people-group text-slate-300"></i>
         </header>
@@ -236,9 +236,9 @@
                            class="block px-4 py-3 hover:bg-slate-50">
                             <div class="flex items-center gap-2 flex-wrap mb-0.5">
                                 <span class="text-[10px] uppercase px-2 py-0.5 rounded
-                                             {% if e.category == 'kk_assembly' %}bg-purple-50 text-purple-700
+                                             {% if e.category == 'general_orientation' %}bg-purple-50 text-purple-700
                                              {% else %}bg-blue-50 text-blue-700{% endif %}">
-                                    {% if e.category == 'kk_assembly' %}KK Assembly{% else %}Pay-out{% endif %}
+                                    {% if e.category == 'general_orientation' %}General Orientation{% else %}Pay-out{% endif %}
                                 </span>
                                 <span class="text-[10px] uppercase px-2 py-0.5 rounded {{ status_styles.get(e.status, 'bg-slate-100 text-slate-700') }}">
                                     {{ e.status }}

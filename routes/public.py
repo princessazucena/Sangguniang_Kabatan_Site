@@ -426,6 +426,48 @@ def resend_code():
 # -----------------------------------------------------------------
 # log in / log out
 # -----------------------------------------------------------------
+LOGIN_MAX_ATTEMPTS  = 5      # wrong passwords allowed before we lock
+LOGIN_LOCKOUT_SECONDS = 60   # how long the lock lasts
+
+
+def _profile_by_email(sb, email: str) -> dict | None:
+    """Look up the profile row for an email, or ``None``."""
+    try:
+        users = sb.auth.admin.list_users()
+        user_list = getattr(users, "users", None) or users
+        user = next(
+            (u for u in user_list if (u.email or "").lower() == email),
+            None,
+        )
+    except Exception:
+        return None
+    if not user:
+        return None
+    res = (
+        sb.table("profiles")
+        .select("id, failed_login_attempts, lockout_until")
+        .eq("id", user.id)
+        .single()
+        .execute()
+    )
+    return res.data
+
+
+def _lockout_remaining_seconds(prof: dict | None) -> int:
+    """Return seconds left in the lockout window, or 0 if not locked."""
+    if not prof:
+        return 0
+    iso = prof.get("lockout_until")
+    if not iso:
+        return 0
+    try:
+        until = datetime.fromisoformat(str(iso).replace("Z", "+00:00"))
+    except Exception:
+        return 0
+    delta = (until - datetime.now(timezone.utc)).total_seconds()
+    return max(0, int(delta + 0.999))  # round up so 0.1s still shows as 1
+
+
 @public_bp.route("/login", methods=["GET", "POST"])
 def login():
     next_url = (request.values.get("next") or "").strip()
@@ -436,23 +478,76 @@ def login():
             return target
         return None
 
+    # Pre-check: if the email on the form (or already in the URL) is locked,
+    # surface the remaining time so the countdown survives a page refresh.
+    pre_email = (request.values.get("email") or "").strip().lower()
+    pre_lock = 0
+    if pre_email:
+        sb_pre = get_supabase()
+        pre_lock = _lockout_remaining_seconds(_profile_by_email(sb_pre, pre_email))
+
     if request.method == "POST":
         email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""
 
         sb = get_supabase()
+
+        # If the account is currently locked, refuse before even hitting auth.
+        prof_row = _profile_by_email(sb, email) if email else None
+        remaining = _lockout_remaining_seconds(prof_row)
+        if remaining > 0:
+            flash(
+                f"Too many failed attempts. Please try again in {remaining} second"
+                f"{'s' if remaining != 1 else ''}.",
+                "error",
+            )
+            return render_template(
+                "public/login.html",
+                next=next_url,
+                lockout_seconds=remaining,
+                lockout_email=email,
+            )
+
         try:
             auth_res = sb.auth.sign_in_with_password({
                 "email": email, "password": password,
             })
         except Exception as exc:
-            flash(f"Login failed: {exc}", "error")
-            return render_template("public/login.html", next=next_url)
+            # Wrong password (or any auth error). Bump the counter and
+            # lock the account once we've crossed the threshold.
+            remaining = _register_failed_login(sb, prof_row)
+            if remaining > 0:
+                flash(
+                    f"Too many failed attempts. Please try again in {remaining} second"
+                    f"{'s' if remaining != 1 else ''}.",
+                    "error",
+                )
+            else:
+                flash(f"Login failed: {exc}", "error")
+            return render_template(
+                "public/login.html",
+                next=next_url,
+                lockout_seconds=remaining,
+                lockout_email=email,
+            )
 
         user = auth_res.user
         if not user:
-            flash("Invalid credentials.", "error")
-            return render_template("public/login.html", next=next_url)
+            remaining = _register_failed_login(sb, prof_row)
+            if remaining > 0:
+                flash(
+                    f"Too many failed attempts. Please try again in {remaining} second"
+                    f"{'s' if remaining != 1 else ''}.",
+                    "error",
+                )
+            else:
+                flash("Invalid credentials.", "error")
+            return render_template(
+                "public/login.html",
+                next=next_url,
+                lockout_seconds=remaining,
+                lockout_email=email,
+            )
 
         prof = (
             sb.table("profiles")
@@ -477,6 +572,15 @@ def login():
             flash("Your account is deactivated. Please contact the admin.", "error")
             return render_template("public/login.html", next=next_url)
 
+        # Successful login -> reset the throttle counter.
+        try:
+            sb.table("profiles").update({
+                "failed_login_attempts": 0,
+                "lockout_until":         None,
+            }).eq("id", user.id).execute()
+        except Exception:
+            pass
+
         session.clear()
         session["user_id"]   = user.id
         session["full_name"] = prof.data["full_name"]
@@ -489,7 +593,35 @@ def login():
             return redirect(url_for("admin.dashboard"))
         return redirect(url_for("student.dashboard"))
 
-    return render_template("public/login.html", next=next_url)
+    return render_template(
+        "public/login.html",
+        next=next_url,
+        lockout_seconds=pre_lock,
+        lockout_email=pre_email,
+    )
+
+
+def _register_failed_login(sb, prof_row: dict | None) -> int:
+    """
+    Bump ``failed_login_attempts`` and start the lockout if the threshold
+    has been hit. Returns the seconds left in the lockout window
+    (``0`` if not locked).
+    """
+    if not prof_row or not prof_row.get("id"):
+        return 0
+    attempts = (prof_row.get("failed_login_attempts") or 0) + 1
+    update = {"failed_login_attempts": attempts}
+    remaining = 0
+    if attempts >= LOGIN_MAX_ATTEMPTS:
+        until = datetime.now(timezone.utc) + timedelta(seconds=LOGIN_LOCKOUT_SECONDS)
+        update["lockout_until"] = until.isoformat()
+        update["failed_login_attempts"] = 0  # reset so the next lockout requires a fresh streak
+        remaining = LOGIN_LOCKOUT_SECONDS
+    try:
+        sb.table("profiles").update(update).eq("id", prof_row["id"]).execute()
+    except Exception:
+        pass
+    return remaining
 
 
 @public_bp.route("/logout")

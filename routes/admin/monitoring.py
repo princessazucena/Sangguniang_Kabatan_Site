@@ -2,7 +2,7 @@
 Admin → Monitoring sidebar button.
 
 Lists every verified application, grouped per registration window, plus
-the joiner roster of every pay-out and KK assembly event. Both tabs
+the joiner roster of every pay-out and General Orientation event. Both tabs
 support a free-text search filter and are segregated per event so an old
 window's data doesn't bleed into a new one.
 """
@@ -116,7 +116,7 @@ def monitoring():
     ]
 
     # ============================================================
-    # Joiners — pay-out + KK assembly events, each its own roster
+    # Joiners — pay-out + General Orientation events, each its own roster
     # ============================================================
     events = (
         sb.table("announcements")
@@ -165,8 +165,8 @@ def monitoring():
 
     total_joins = sum(g["join_count"] for g in event_groups)
     open_now    = sum(1 for g in event_groups if g["status"] == "open")
-    payouts_count   = sum(1 for g in event_groups if g["category"] == "payout")
-    assembly_count  = sum(1 for g in event_groups if g["category"] == "kk_assembly")
+    payouts_count       = sum(1 for g in event_groups if g["category"] == "payout")
+    orientation_count   = sum(1 for g in event_groups if g["category"] == "general_orientation")
 
     return render_template(
         "admin/monitoring.html",
@@ -184,6 +184,6 @@ def monitoring():
         events_total=len(event_groups),
         events_open=open_now,
         payouts_count=payouts_count,
-        assembly_count=assembly_count,
+        orientation_count=orientation_count,
         q_joiners=q_joiners,
     )

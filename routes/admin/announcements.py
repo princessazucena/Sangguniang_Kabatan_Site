@@ -67,7 +67,7 @@ def announcements():
             flash("Pumili ng kahit isang channel para sa announcement.", "error")
             return redirect(url_for("admin.announcements"))
 
-        sb.table("announcements").insert({
+        inserted = sb.table("announcements").insert({
             "title":     title,
             "body":      body,
             "category":  category,
@@ -78,6 +78,36 @@ def announcements():
             "notify_email":   notify_email,
             "posted_by": session["user_id"],
         }).execute()
+        new_id = (inserted.data or [{}])[0].get("id")
+
+        # For events that issue Certificates of Attendance, route the
+        # admin straight to the Certificates page (with this event
+        # selected) so they can generate one per joiner without hunting
+        # for the menu item.
+        if category in ("payout", "general_orientation") and new_id:
+            label = "Pay-out" if category == "payout" else "General Orientation"
+            flash(
+                f"{label} announcement posted. "
+                f"Certificate ready — opening the Certificates page.",
+                "success",
+            )
+            # Email broadcast first (still backgrounded below) so we
+            # don't drop it on the redirect path.
+            if notify_email:
+                try:
+                    latest = (
+                        sb.table("announcements")
+                        .select("*")
+                        .eq("id", new_id)
+                        .single()
+                        .execute()
+                    ).data
+                    if latest:
+                        _broadcast_in_background(current_app._get_current_object(), latest)
+                except Exception:
+                    current_app.logger.exception("Could not start announcement broadcast")
+            return redirect(url_for("admin.certificates", event_id=new_id))
+
         flash("Announcement posted.", "success")
 
         # Email every student in the background, but only when the email
@@ -87,13 +117,12 @@ def announcements():
                 latest = (
                     sb.table("announcements")
                     .select("*")
-                    .eq("title", title)
-                    .order("created_at", desc=True)
-                    .limit(1)
+                    .eq("id", new_id)
+                    .single()
                     .execute()
-                ).data or []
+                ).data
                 if latest:
-                    _broadcast_in_background(current_app._get_current_object(), latest[0])
+                    _broadcast_in_background(current_app._get_current_object(), latest)
             except Exception:
                 # Don't fail the admin flow if we can't kick off the email.
                 current_app.logger.exception("Could not start announcement broadcast")
@@ -108,7 +137,7 @@ def announcements():
     ).data or []
     annotate(items)
 
-    # Attach join counts for joinable announcements (payout + kk_assembly).
+    # Attach join counts for joinable announcements (payout + general_orientation).
     joinable_ids = [
         a["id"] for a in items if a.get("category") in JOINABLE_CATEGORIES
     ]
@@ -144,7 +173,7 @@ def announcement_joiners(anc_id: int):
         return redirect(url_for("admin.announcements"))
 
     if anc.get("category") not in JOINABLE_CATEGORIES:
-        flash("Only pay-out and KK assembly announcements have joiners.", "error")
+        flash("Only pay-out and General Orientation announcements have joiners.", "error")
         return redirect(url_for("admin.announcements"))
 
     anc["status"] = schedule_status(anc)
@@ -177,7 +206,7 @@ def delete_announcement(anc_id: int):
     registration leaves no scholar records behind, so a previously
     verified student stops being a scholar.
 
-    Pay-out / KK assembly joiners are removed automatically by the
+    Pay-out / General Orientation joiners are removed automatically by the
     foreign-key cascade on ``announcement_joins``.
     """
     sb = get_supabase()

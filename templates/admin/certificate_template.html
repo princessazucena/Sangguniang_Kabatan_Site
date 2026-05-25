@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <title>Certificate of Attendance</title>
+    <title>{% if event %}{{ event.title }} · Certificates{% else %}Certificate of Attendance{% endif %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cormorant+Garamond:wght@400;500;700&family=Poppins:wght@300;400;500;600;700&display=swap"
@@ -11,7 +11,6 @@
         :root {
             --gold:        #b08642;
             --gold-light:  #d8b46d;
-            --gold-faint:  #f5e9c9;
             --paper:       #fdfaf1;
             --ink:         #2b2b2b;
             --ink-muted:   #4a4a4a;
@@ -20,6 +19,8 @@
         }
 
         * { box-sizing: border-box; }
+
+        @page { size: A4 landscape; margin: 0; }
 
         html, body {
             margin: 0;
@@ -30,6 +31,37 @@
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
+
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: rgba(255, 255, 255, .95);
+            border-bottom: 1px solid #d8d4c4;
+            padding: 8px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            font-size: 13px;
+        }
+        .toolbar .info { color: #475569; }
+        .toolbar .info b { color: #1f2937; }
+        .toolbar .actions { display: flex; gap: 8px; }
+        .toolbar button, .toolbar a.btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .toolbar .btn-primary { background: #6f9d63; color: #fff; }
+        .toolbar .btn-primary:hover { background: #5a8550; }
+        .toolbar .btn-ghost { background: #fff; border-color: #e2e8f0; color: #1f2937; }
+        .toolbar .btn-ghost:hover { background: #f1f5f9; }
 
         .page {
             width: 1056px;
@@ -59,7 +91,6 @@
             pointer-events: none;
         }
 
-        /* ---------- Faded watermark / silhouettes ---------- */
         .watermark {
             position: absolute;
             inset: 0;
@@ -86,9 +117,7 @@
         }
         .silhouette.left  { left: 4%; }
         .silhouette.right { right: 4%; }
-        .silhouette::before {
-            content: "♟";       /* simple silhouette glyph */
-        }
+        .silhouette::before { content: "♟"; }
 
         /* ---------- Header strip ---------- */
         .header {
@@ -140,7 +169,6 @@
             margin-top: 2px;
         }
 
-        /* ---------- Title ---------- */
         .title {
             text-align: center;
             font-family: 'Cinzel', serif;
@@ -151,16 +179,7 @@
             margin: 22px 56px 8px;
             text-shadow: 0 1px 0 rgba(0,0,0,.05);
         }
-        .title small {
-            display: block;
-            font-family: 'Cinzel', serif;
-            font-size: 16px;
-            letter-spacing: .35em;
-            color: var(--ink-muted);
-            margin-top: 4px;
-        }
 
-        /* ---------- Body ---------- */
         .body {
             text-align: center;
             padding: 0 110px;
@@ -202,9 +221,7 @@
             max-width: 720px;
         }
         .narrative .strong { font-weight: 700; }
-        .narrative em { font-style: italic; }
 
-        /* ---------- Signatures ---------- */
         .signatures {
             margin: 22px 80px 0;
             display: grid;
@@ -227,7 +244,6 @@
             letter-spacing: .04em;
         }
 
-        /* ---------- Footer ribbon ---------- */
         .ribbon {
             margin: 22px 36px 28px;
             background: linear-gradient(90deg, var(--gold) 0%, #c89a4d 50%, var(--gold) 100%);
@@ -251,7 +267,6 @@
             opacity: .9;
         }
 
-        /* ---------- Side ornaments (ribbon + KK seal placeholders) ---------- */
         .ornament {
             position: absolute;
             top: 38%;
@@ -259,11 +274,6 @@
             height: 100px;
             display: grid;
             place-items: center;
-            color: var(--accent-red);
-            font-family: 'Cinzel', serif;
-            font-weight: 700;
-            font-size: 18px;
-            letter-spacing: .12em;
         }
         .ornament .badge {
             width: 60px;
@@ -274,6 +284,8 @@
             display: grid;
             place-items: center;
             color: var(--accent-blue);
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
             font-size: 14px;
         }
         .ornament.left  { left: 2%;  }
@@ -282,17 +294,49 @@
         /* ---------- Print ---------- */
         @media print {
             body { background: #fff; }
+            .toolbar { display: none !important; }
             .page {
                 margin: 0;
                 box-shadow: none;
                 border-radius: 0;
                 width: 100%;
-                aspect-ratio: 1056 / 612;
+                aspect-ratio: auto;
+                height: 100vh;
+                page-break-after: always;
+                break-after: page;
+            }
+            .page:last-of-type {
+                page-break-after: auto;
+                break-after: auto;
             }
         }
     </style>
 </head>
 <body>
+
+{% if not single %}
+<div class="toolbar">
+    <div class="info">
+        {% if event %}
+            <b>{{ event_label }}</b> &middot; {{ event.title }}
+        {% endif %}
+        <span style="margin-left:8px;">
+            {{ certificates | length }} certificate{{ '' if certificates|length == 1 else 's' }}
+        </span>
+    </div>
+    <div class="actions">
+        <a href="{{ url_for('admin.certificates', event_id=event.id) if event else url_for('admin.certificates') }}"
+           class="btn btn-ghost">
+            ← Back
+        </a>
+        <button type="button" class="btn-primary" onclick="window.print();">
+            🖨 Print / Save as PDF
+        </button>
+    </div>
+</div>
+{% endif %}
+
+{% for c in certificates %}
     <div class="page" role="document" aria-label="Certificate of Attendance">
         <div class="frame-outer"></div>
         <div class="frame-inner"></div>
@@ -308,7 +352,7 @@
                 <div class="republic">Republic of the Philippines</div>
                 <div class="org">SANGGUNIANG KABATAAN &mdash; BARANGAY</div>
                 <div class="location">
-                    {{ barangay }}, {{ city }}, {{ province }}
+                    {{ c.barangay }}, {{ c.city }}, {{ c.province }}
                 </div>
             </div>
             <div class="seal right" aria-hidden="true">
@@ -316,28 +360,33 @@
             </div>
         </header>
 
-        <h1 class="title">
-            CERTIFICATE OF ATTENDANCE
-        </h1>
+        <h1 class="title">{{ c.title_text or 'CERTIFICATE OF ATTENDANCE' }}</h1>
 
         <section class="body">
             <p class="lead">This is to certify that</p>
             <div class="name-line">
-                <span class="name">{{ participant_name }}</span>
+                <span class="name">{{ c.participant_name }}</span>
             </div>
-            <p class="home">of {{ home_purok }}</p>
+            <p class="home">of {{ c.home_purok }}</p>
 
             <p class="narrative">
                 has actively attended and participated in the
-                <span class="strong">{{ event_title }}</span>
-                <em>(e.g., Annual Katipunan ng Kabataan General Assembly or Quarterly KK Assembly)</em>,
-                with the theme:
-                &ldquo;<span class="strong">{{ event_theme }}</span>&rdquo;
-                <em>(e.g., &ldquo;Kabataan Tungo sa Maunlad na Komunidad&rdquo;)</em>
+                <span class="strong">{{ c.event_title }}</span>
+                {% if c.event_kind %}
+                    <span style="color: var(--ink-muted);">({{ c.event_kind }})</span>
+                {% endif %}
+                {% if c.event_theme %}
+                    , with the theme:
+                    &ldquo;<span class="strong">{{ c.event_theme }}</span>&rdquo;
+                {% endif %}
             </p>
             <p class="narrative" style="margin-top: 8px;">
-                Held on <span class="strong">{{ event_date }}</span>,
-                at {{ event_venue }}.
+                {% if c.event_date %}
+                    Held on <span class="strong">{{ c.event_date }}</span>,
+                {% endif %}
+                {% if c.event_venue %}
+                    at {{ c.event_venue }}.
+                {% endif %}
             </p>
         </section>
 
@@ -351,19 +400,19 @@
         <section class="signatures">
             <div>
                 <div class="sig-line">
-                    <div class="sig-name">{{ sk_chairperson }}</div>
+                    <div class="sig-name">{{ c.sk_chairperson }}</div>
                     <div class="sig-role">SK Chairperson</div>
                 </div>
             </div>
             <div>
                 <div class="sig-line">
-                    <div class="sig-name">{{ sk_secretary }}</div>
+                    <div class="sig-name">{{ c.sk_secretary }}</div>
                     <div class="sig-role">SK Secretary</div>
                 </div>
             </div>
             <div>
                 <div class="sig-line">
-                    <div class="sig-name">{{ brgy_chairperson }}</div>
+                    <div class="sig-name">{{ c.brgy_chairperson }}</div>
                     <div class="sig-role">(Optional)</div>
                 </div>
             </div>
@@ -374,5 +423,7 @@
             <span class="tag">AKTIBONG KABATAAN, MAUNLAD NA PAMAYANAN</span>
         </div>
     </div>
+{% endfor %}
+
 </body>
 </html>

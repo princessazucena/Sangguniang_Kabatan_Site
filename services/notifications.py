@@ -28,10 +28,10 @@ from services.announcements import annotate
 
 
 _CATEGORY_META = {
-    "registration": {"icon": "fa-clipboard-list",     "tone": "brand"},
-    "payout":       {"icon": "fa-hand-holding-dollar","tone": "blue"},
-    "kk_assembly":  {"icon": "fa-people-group",       "tone": "purple"},
-    "general":      {"icon": "fa-bullhorn",           "tone": "slate"},
+    "registration":        {"icon": "fa-clipboard-list",     "tone": "brand"},
+    "payout":              {"icon": "fa-hand-holding-dollar","tone": "blue"},
+    "general_orientation": {"icon": "fa-people-group",       "tone": "purple"},
+    "general":             {"icon": "fa-bullhorn",           "tone": "slate"},
 }
 
 

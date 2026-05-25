@@ -237,6 +237,53 @@ def decide(app_id: int):
     return redirect(url_for("admin.review", app_id=app_id))
 
 
+@admin_bp.route("/applications/<int:app_id>/delete", methods=["POST"])
+@admin_required
+def delete_application(app_id: int):
+    """
+    Permanently delete a single application, its file rows, and its
+    uploaded files in storage. Used from the Applications list.
+    """
+    sb = get_supabase()
+
+    # Make sure the row exists so we can show a useful message.
+    existing = (
+        sb.table("applications")
+        .select("id")
+        .eq("id", app_id)
+        .limit(1)
+        .execute()
+    ).data
+    if not existing:
+        flash("Application not found.", "error")
+        return redirect(url_for("admin.applications"))
+
+    # Pull the file rows so we can wipe them from storage too.
+    files = (
+        sb.table("application_files")
+        .select("id, storage_path")
+        .eq("application_id", app_id)
+        .execute()
+    ).data or []
+    paths = [f["storage_path"] for f in files if f.get("storage_path")]
+    if paths:
+        try:
+            sb.storage.from_(get_bucket_name()).remove(paths)
+        except Exception:
+            # Storage hiccups should not block the DB cleanup.
+            pass
+
+    sb.table("application_files").delete().eq("application_id", app_id).execute()
+    sb.table("applications").delete().eq("id", app_id).execute()
+
+    flash(
+        f"Application deleted ({len(files)} file"
+        f"{'s' if len(files) != 1 else ''} removed).",
+        "success",
+    )
+    return redirect(url_for("admin.applications"))
+
+
 # ---------------------------------------------------------------------------
 # Inline document viewer + print packet
 # ---------------------------------------------------------------------------

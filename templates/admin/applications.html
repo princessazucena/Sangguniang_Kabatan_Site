@@ -70,8 +70,21 @@
                                 </span>
                             </td>
                             <td class="px-5 py-2 text-right">
-                                <a href="{{ url_for('admin.review', app_id=a.id) }}"
-                                   class="text-brand-600 hover:underline">Review</a>
+                                <div class="inline-flex items-center gap-3">
+                                    <a href="{{ url_for('admin.review', app_id=a.id) }}"
+                                       class="text-brand-600 hover:underline">Review</a>
+                                    <form method="post"
+                                          action="{{ url_for('admin.delete_application', app_id=a.id) }}"
+                                          onsubmit="return confirm('Permanently delete this application{{ ' for ' ~ a.student.full_name if a.student and a.student.full_name else '' }}? Their uploaded documents will also be removed. This cannot be undone.');"
+                                          class="inline">
+                                        <button type="submit"
+                                                class="text-red-600 hover:underline inline-flex items-center gap-1"
+                                                aria-label="Delete application">
+                                            <i class="fa-solid fa-trash text-xs"></i>
+                                            Delete
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     {% endfor %}

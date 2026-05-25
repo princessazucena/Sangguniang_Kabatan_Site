@@ -72,8 +72,8 @@ def join_payout(anc_id: int):
             "announcement_id": anc_id,
             "student_id":      student_id,
         }).execute()
-        if anc.get("category") == "kk_assembly":
-            flash("You're on the list. See you at the KK assembly.", "success")
+        if anc.get("category") == "general_orientation":
+            flash("You're on the list. See you at the General Orientation.", "success")
         else:
             flash("You're on the list. Check announcements again on the payout date.", "success")
     except Exception:

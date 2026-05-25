@@ -10,7 +10,7 @@
 {% set category_styles = {
     'registration': 'bg-brand-50 text-brand-700',
     'payout':       'bg-blue-50 text-blue-700',
-    'kk_assembly':  'bg-purple-50 text-purple-700',
+    'general_orientation':  'bg-purple-50 text-purple-700',
     'general':      'bg-slate-100 text-slate-700',
 } %}
 
@@ -74,7 +74,7 @@
                     <p class="mt-2 text-sm text-slate-700 whitespace-pre-line">{{ a.body }}</p>
 
                     <div class="mt-3 flex items-center gap-3 flex-wrap">
-                        {% if a.category in ('payout', 'kk_assembly') %}
+                        {% if a.category in ('payout', 'general_orientation') %}
                             <a href="{{ url_for('admin.announcement_joiners', anc_id=a.id) }}"
                                class="text-sm text-brand-600 hover:underline">
                                 <i class="fa-solid fa-users mr-1"></i>
@@ -83,7 +83,7 @@
                         {% endif %}
                         <form method="post"
                               action="{{ url_for('admin.delete_announcement', anc_id=a.id) }}"
-                              onsubmit="return confirm({% if a.category == 'registration' %}'Delete this registration announcement? This will also remove every application (pending, verified, or rejected) tied to this window and the files they uploaded. Verified students will no longer count as scholars.'{% elif a.category in ('payout', 'kk_assembly') %}'Delete this announcement? Joiners attached to it will also be removed.'{% else %}'Delete this announcement?'{% endif %});"
+                              onsubmit="return confirm({% if a.category == 'registration' %}'Delete this registration announcement? This will also remove every application (pending, verified, or rejected) tied to this window and the files they uploaded. Verified students will no longer count as scholars.'{% elif a.category in ('payout', 'general_orientation') %}'Delete this announcement? Joiners attached to it will also be removed.'{% else %}'Delete this announcement?'{% endif %});"
                               class="ml-auto">
                             <button type="submit"
                                     class="text-xs text-red-600 hover:underline">
@@ -123,7 +123,7 @@
                         class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-400">
                     <option value="registration">Scholarship Registration</option>
                     <option value="payout">Scholarship Pay Out</option>
-                    <option value="kk_assembly">KK Assembly</option>
+                    <option value="general_orientation">General Orientation</option>
                     <option value="general">General</option>
                 </select>
             </div>
@@ -152,7 +152,7 @@
                 <p class="text-xs text-slate-500">
                     For <span class="font-medium">Registration</span>, students can apply / upload only between these dates.<br/>
                     For <span class="font-medium">Pay Out</span>, students can join only between these dates.<br/>
-                    For <span class="font-medium">KK Assembly</span>, students can join only between these dates.
+                    For <span class="font-medium">General Orientation</span>, students can join only between these dates.
                 </p>
             </div>
 
@@ -230,7 +230,7 @@
     if (cat && sched) {
         const startInput = sched.querySelector('input[name="start_at"]');
         const endInput   = sched.querySelector('input[name="end_at"]');
-        const scheduledCats = new Set(['registration', 'payout', 'kk_assembly']);
+        const scheduledCats = new Set(['registration', 'payout', 'general_orientation']);
         function refresh() {
             const scheduled = scheduledCats.has(cat.value);
             sched.style.display = scheduled ? '' : 'none';

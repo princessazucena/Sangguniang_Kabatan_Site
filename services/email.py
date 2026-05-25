@@ -166,10 +166,10 @@ def _format_ph_dt(value) -> str:
 
 
 _CATEGORY_PRETTY = {
-    "registration": "Scholarship Registration",
-    "payout":       "Scholarship Pay Out",
-    "kk_assembly":  "KK Assembly",
-    "general":      "General announcement",
+    "registration":        "Scholarship Registration",
+    "payout":              "Scholarship Pay Out",
+    "general_orientation": "General Orientation",
+    "general":             "General announcement",
 }
 
 

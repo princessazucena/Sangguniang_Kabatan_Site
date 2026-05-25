@@ -5,20 +5,45 @@
 <h1 class="text-xl font-bold mb-1 text-brand-700">Welcome back</h1>
 <p class="text-sm text-slate-500 mb-4">Log in to continue your application.</p>
 
-<form method="post" class="space-y-3">
+{% set is_locked = (lockout_seconds or 0) > 0 %}
+
+{# Lockout banner. The countdown ticks live and survives refreshes because
+   ``lockout_seconds`` is computed server-side from the stored expiry. #}
+<div id="lockout-banner"
+     class="mb-3 p-3 rounded-md border border-red-200 bg-red-50 text-red-700 text-sm
+            {% if not is_locked %}hidden{% endif %}"
+     role="alert" aria-live="polite"
+     data-lockout-seconds="{{ lockout_seconds or 0 }}">
+    <div class="flex items-start gap-2">
+        <i class="fa-solid fa-lock mt-0.5"></i>
+        <div class="min-w-0">
+            <p class="font-medium">Account temporarily locked</p>
+            <p class="text-xs">
+                Too many failed attempts. Please try again in
+                <span id="lockout-countdown" class="font-semibold">{{ lockout_seconds or 0 }}</span>
+                second<span id="lockout-plural">{% if (lockout_seconds or 0) != 1 %}s{% endif %}</span>.
+            </p>
+        </div>
+    </div>
+</div>
+
+<form method="post" class="space-y-3" id="login-form">
     {% if next %}
         <input type="hidden" name="next" value="{{ next }}" />
     {% endif %}
     <div>
         <label class="block text-sm font-medium mb-1">Email</label>
         <input name="email" type="email" required
-               class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+               value="{{ lockout_email or '' }}"
+               {% if is_locked %}readonly{% endif %}
+               class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 read-only:bg-slate-50" />
     </div>
     <div>
         <label class="block text-sm font-medium mb-1">Password</label>
         <div class="password-field relative">
             <input name="password" type="password" required
-                   class="w-full rounded-md border border-slate-300 px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                   {% if is_locked %}disabled{% endif %}
+                   class="w-full rounded-md border border-slate-300 px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 disabled:bg-slate-50" />
             <button type="button" data-password-toggle
                     class="absolute inset-y-0 right-0 px-3 flex items-center text-slate-500 hover:text-slate-700"
                     aria-label="Show password" aria-pressed="false">
@@ -32,9 +57,14 @@
             </a>
         </p>
     </div>
-    <button type="submit"
-            class="w-full bg-brand-500 hover:bg-brand-600 text-white font-medium py-2 rounded-md text-sm">
-        Log in
+    <button type="submit" id="login-submit"
+            {% if is_locked %}disabled{% endif %}
+            class="w-full bg-brand-500 hover:bg-brand-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium py-2 rounded-md text-sm">
+        {% if is_locked %}
+            Locked — try again in <span id="lockout-button-countdown">{{ lockout_seconds or 0 }}</span>s
+        {% else %}
+            Log in
+        {% endif %}
     </button>
 </form>
 
@@ -42,4 +72,47 @@
     Don't have an account?
     <a href="{{ url_for('public.signup') }}" class="text-brand-600 hover:underline">Sign up</a>
 </p>
+
+<script>
+(function () {
+    const banner = document.getElementById('lockout-banner');
+    if (!banner) return;
+
+    let remaining = parseInt(banner.dataset.lockoutSeconds || '0', 10);
+    if (!Number.isFinite(remaining) || remaining <= 0) return;
+
+    const form    = document.getElementById('login-form');
+    const submit  = document.getElementById('login-submit');
+    const pwInput = form ? form.querySelector('input[name="password"]') : null;
+    const counter = document.getElementById('lockout-countdown');
+    const plural  = document.getElementById('lockout-plural');
+    const btnCount = document.getElementById('lockout-button-countdown');
+
+    function render() {
+        if (counter)  counter.textContent  = String(remaining);
+        if (btnCount) btnCount.textContent = String(remaining);
+        if (plural)   plural.textContent   = remaining === 1 ? '' : 's';
+    }
+
+    function unlock() {
+        banner.classList.add('hidden');
+        if (submit) {
+            submit.disabled = false;
+            submit.textContent = 'Log in';
+        }
+        if (pwInput) pwInput.disabled = false;
+    }
+
+    render();
+    const tick = setInterval(function () {
+        remaining -= 1;
+        if (remaining <= 0) {
+            clearInterval(tick);
+            unlock();
+            return;
+        }
+        render();
+    }, 1000);
+})();
+</script>
 {% endblock %}

@@ -20,6 +20,8 @@ create table if not exists public.profiles (
     address_province text,
     address_region   text,
     address_zip      text,
+    failed_login_attempts int not null default 0,
+    lockout_until         timestamptz,
     role text not null default 'student' check (role in ('student','admin')),
     created_at timestamptz not null default now()
 );
@@ -29,7 +31,7 @@ create table if not exists public.announcements (
     id bigserial primary key,
     title text not null,
     body text not null,
-    category text check (category in ('registration','payout','kk_assembly','general')),
+    category text check (category in ('registration','payout','general_orientation','general')),
     start_at timestamptz,
     end_at   timestamptz,
     notify_landing boolean not null default true,
