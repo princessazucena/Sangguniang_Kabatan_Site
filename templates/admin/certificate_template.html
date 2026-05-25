@@ -317,23 +317,15 @@
 
             <p class="narrative">
                 has actively attended and participated in the
-                <span class="strong">{{ c.event_title }}</span>
-                {% if c.event_kind %}
-                    <span style="color: var(--ink-muted);">({{ c.event_kind }})</span>
-                {% endif %}
-                {% if c.event_theme %}
-                    , with the theme:
-                    &ldquo;<span class="strong">{{ c.event_theme }}</span>&rdquo;
-                {% endif %}
+                <span class="strong">{{ c.event_kind or c.event_title }}</span>{% if c.event_venue %} at {{ c.event_venue }}{% endif %}{% if c.event_theme %},
+                with the theme:
+                &ldquo;<span class="strong">{{ c.event_theme }}</span>&rdquo;{% endif %}.
             </p>
-            <p class="narrative" style="margin-top: 8px;">
-                {% if c.event_date %}
-                    Held on <span class="strong">{{ c.event_date }}</span>,
-                {% endif %}
-                {% if c.event_venue %}
-                    at {{ c.event_venue }}.
-                {% endif %}
-            </p>
+            {% if c.event_date %}
+                <p class="narrative" style="margin-top: 8px;">
+                    Held on <span class="strong">{{ c.event_date }}</span>.
+                </p>
+            {% endif %}
         </section>
 
         <section class="signatures">

@@ -27,8 +27,14 @@ PH_TZ = timezone(timedelta(hours=8))
 # Default text we splash on placeholders. The admin can wire actual
 # values in later via env / settings.
 DEFAULT_BARANGAY = "Bukal"
-DEFAULT_CITY     = "Tayabas City"
-DEFAULT_PROVINCE = "Quezon"
+DEFAULT_CITY     = "Majayjay"
+DEFAULT_PROVINCE = "Laguna"
+
+# Default SK officials shown on the signature lines. The admin can
+# override any of these via querystring (?sk_chairperson=...&...).
+DEFAULT_SK_CHAIRPERSON   = "Alex Jene B. Azucena"
+DEFAULT_SK_SECRETARY     = "[Name of SK Secretary]"
+DEFAULT_BRGY_CHAIRPERSON = "[Name of Barangay Chairperson]"
 
 
 _TITLE_BY_CATEGORY = {
@@ -81,26 +87,17 @@ def _event_context(event: dict) -> dict:
         "event_kind":  _NARRATIVE_KIND_BY_CATEGORY.get(event.get("category"), "Event"),
         "event_theme": "",  # admin can extend the schema later
         "event_date":  _format_event_date(event.get("start_at"), event.get("end_at")),
-        "event_venue": f"{DEFAULT_BARANGAY}, {DEFAULT_CITY}",
+        "event_venue": f"Brgy. {DEFAULT_BARANGAY}, {DEFAULT_CITY}, {DEFAULT_PROVINCE}",
         "title_text":  _TITLE_BY_CATEGORY.get(event.get("category"), "CERTIFICATE OF ATTENDANCE"),
-        "sk_chairperson":   request.args.get("sk_chairperson") or "[Name of SK Chairperson]",
-        "sk_secretary":     request.args.get("sk_secretary") or "[Name of SK Secretary]",
-        "brgy_chairperson": request.args.get("brgy_chairperson") or "[Name of Barangay Chairperson]",
+        "sk_chairperson":   request.args.get("sk_chairperson") or DEFAULT_SK_CHAIRPERSON,
+        "sk_secretary":     request.args.get("sk_secretary") or DEFAULT_SK_SECRETARY,
+        "brgy_chairperson": request.args.get("brgy_chairperson") or DEFAULT_BRGY_CHAIRPERSON,
     }
 
 
-def _participant_home(profile: dict) -> str:
-    """Build a friendly 'home' line for the certificate body."""
-    if not profile:
-        return f"{DEFAULT_BARANGAY}, {DEFAULT_CITY}"
-    parts = []
-    if profile.get("address_purok"):
-        parts.append(profile["address_purok"])
-    bgy = profile.get("address_barangay") or DEFAULT_BARANGAY
-    city = profile.get("address_city") or DEFAULT_CITY
-    parts.append(bgy)
-    parts.append(city)
-    return ", ".join(parts)
+def _participant_home() -> str:
+    """The 'home' line is fixed for every joiner: residents of Brgy. Bukal."""
+    return f"Barangay {DEFAULT_BARANGAY}"
 
 
 # ---------------------------------------------------------------------------
@@ -157,7 +154,7 @@ def certificate_preview():
     ctx = _event_context({"category": "general_orientation"})
     ctx.update({
         "participant_name": request.args.get("participant_name") or "[NAME OF PARTICIPANT]",
-        "home_purok":       request.args.get("home_purok") or "[Home Barangay/Purok]",
+        "home_purok":       request.args.get("home_purok") or _participant_home(),
     })
 
     # Allow query-string overrides for the demo page.
@@ -220,7 +217,7 @@ def generate_certificates(event_id: int):
         student = j.get("student") or {}
         ctx = dict(base_ctx)
         ctx["participant_name"] = student.get("full_name") or "—"
-        ctx["home_purok"]       = _participant_home(student)
+        ctx["home_purok"]       = _participant_home()
         certificates.append(ctx)
 
     return render_template(
