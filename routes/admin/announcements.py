@@ -63,14 +63,14 @@ def announcements():
             return redirect(url_for("admin.announcements"))
         if category in SCHEDULED_CATEGORIES:
             if not start_at or not end_at:
-                flash("Scheduled announcements need both a start and end date.", "error")
+                flash("Scheduled events need both a start and end date.", "error")
                 return redirect(url_for("admin.announcements"))
             if start_at >= end_at:
                 flash("End date must be after the start date.", "error")
                 return redirect(url_for("admin.announcements"))
 
         if not (notify_landing or notify_inapp or notify_email):
-            flash("Pumili ng kahit isang channel para sa announcement.", "error")
+            flash("Pumili ng kahit isang channel para sa event.", "error")
             return redirect(url_for("admin.announcements"))
 
         inserted = sb.table("announcements").insert({
@@ -93,7 +93,7 @@ def announcements():
         if category in ("payout", "general_orientation") and new_id:
             label = "Pay-out" if category == "payout" else "General Orientation"
             flash(
-                f"{label} announcement posted. "
+                f"{label} event posted. "
                 f"Certificate ready — opening the Certificates page.",
                 "success",
             )
@@ -114,7 +114,7 @@ def announcements():
                     current_app.logger.exception("Could not start announcement broadcast")
             return redirect(url_for("admin.certificates", event_id=new_id))
 
-        flash("Announcement posted.", "success")
+        flash("Event posted.", "success")
 
         # Email every student in the background, but only when the email
         # channel is enabled for this announcement.
@@ -175,11 +175,11 @@ def announcement_joiners(anc_id: int):
         sb.table("announcements").select("*").eq("id", anc_id).single().execute()
     ).data
     if not anc:
-        flash("Announcement not found.", "error")
+        flash("Event not found.", "error")
         return redirect(url_for("admin.announcements"))
 
     if anc.get("category") not in JOINABLE_CATEGORIES:
-        flash("Only pay-out and General Orientation announcements have joiners.", "error")
+        flash("Only pay-out and General Orientation events have joiners.", "error")
         return redirect(url_for("admin.announcements"))
 
     anc["status"] = schedule_status(anc)
@@ -209,7 +209,7 @@ def announcement_joiners_pdf(anc_id: int):
         sb.table("announcements").select("*").eq("id", anc_id).single().execute()
     ).data
     if not anc:
-        flash("Announcement not found.", "error")
+        flash("Event not found.", "error")
         return redirect(url_for("admin.announcements"))
 
     if anc.get("category") not in JOINABLE_CATEGORIES:
@@ -269,7 +269,7 @@ def delete_announcement(anc_id: int):
         .execute()
     ).data
     if not anc:
-        flash("Announcement not found.", "error")
+        flash("Event not found.", "error")
         return redirect(url_for("admin.announcements"))
 
     summary_bits: list[str] = []
@@ -325,9 +325,9 @@ def delete_announcement(anc_id: int):
 
     if summary_bits:
         flash(
-            "Announcement deleted, along with " + ", ".join(summary_bits) + ".",
+            "Event deleted, along with " + ", ".join(summary_bits) + ".",
             "success",
         )
     else:
-        flash("Announcement deleted.", "success")
+        flash("Event deleted.", "success")
     return redirect(url_for("admin.announcements"))

@@ -80,11 +80,11 @@ def join_payout(anc_id: int):
         sb.table("announcements").select("*").eq("id", anc_id).single().execute()
     ).data
     if not anc or anc.get("category") not in JOINABLE_CATEGORIES:
-        flash("That announcement does not accept joiners.", "error")
+        flash("That event does not accept joiners.", "error")
         return redirect(url_for("student.announcements"))
 
     if schedule_status(anc) != "open":
-        flash("The join window for this announcement is not open.", "error")
+        flash("The join window for this event is not open.", "error")
         return redirect(url_for("student.announcements"))
 
     signature = (request.form.get("signature") or "").strip()
@@ -104,7 +104,7 @@ def join_payout(anc_id: int):
         if anc.get("category") == "general_orientation":
             flash("You're on the list. See you at the General Orientation.", "success")
         else:
-            flash("You're on the list. Check announcements again on the payout date.", "success")
+            flash("You're on the list. Check events again on the payout date.", "success")
     except Exception:
         # Likely a duplicate (unique constraint) — backfill the signature
         # so old rows that joined before signatures were required also

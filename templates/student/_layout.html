@@ -47,7 +47,7 @@
                 <a href="{{ url_for('student.announcements') }}"
                    class="{{ nav_base }} {% if request.endpoint == 'student.announcements' %}{{ nav_active }}{% else %}{{ nav_idle }}{% endif %}">
                     <i class="fa-solid fa-bullhorn w-5 text-center"></i>
-                    <span>Announcements</span>
+                    <span>Events</span>
                 </a>
                 <a href="{{ url_for('public.logout') }}"
                    class="{{ nav_base }} text-red-600 hover:bg-red-50">
@@ -101,7 +101,7 @@
             <a href="{{ url_for('student.announcements') }}"
                class="{{ m_base }} {% if request.endpoint == 'student.announcements' %}{{ m_active }}{% else %}{{ m_idle }}{% endif %}">
                 <i class="fa-solid fa-bullhorn w-5 text-center"></i>
-                <span>Announcements</span>
+                <span>Events</span>
             </a>
             <a href="{{ url_for('public.logout') }}"
                class="{{ m_base }} text-red-600 hover:bg-red-50">

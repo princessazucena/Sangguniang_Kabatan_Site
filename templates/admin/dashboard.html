@@ -48,7 +48,7 @@
         </a>
         <a href="{{ url_for('admin.announcements') }}"
            class="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm font-medium">
-            <i class="fa-solid fa-bullhorn"></i> Post announcement
+            <i class="fa-solid fa-bullhorn"></i> Post event
         </a>
     </div>
 </header>
@@ -148,11 +148,11 @@
         </div>
     </section>
 
-    {# Announcement category mix #}
+    {# Event category mix #}
     <section class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
         <header class="flex items-center justify-between mb-3">
             <div>
-                <h2 class="font-semibold">Announcement mix</h2>
+                <h2 class="font-semibold">Event mix</h2>
                 <p class="text-xs text-slate-500">Posts grouped by category.</p>
             </div>
             <i class="fa-solid fa-bullhorn text-slate-300"></i>
@@ -387,7 +387,7 @@
         });
     }
 
-    // ---------- Announcement category pie ----------
+    // ---------- Event category pie ----------
     const catCtx = document.getElementById('chart-category');
     if (catCtx) {
         new Chart(catCtx, {

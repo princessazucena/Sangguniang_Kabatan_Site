@@ -1,5 +1,5 @@
 {% extends "student/_layout.html" %}
-{% block title %}Announcements · Sangguniang Kabataan ng Bukal Scholarship Portal{% endblock %}
+{% block title %}Events · Sangguniang Kabataan ng Bukal Scholarship Portal{% endblock %}
 
 {% set status_styles = {
     'open':        'bg-green-100 text-green-800',
@@ -24,7 +24,7 @@
 <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-3 sm:p-6">
     <div class="flex items-center gap-2 mb-3 sm:mb-4">
         <i class="fa-solid fa-bullhorn text-brand-600"></i>
-        <h1 class="text-base sm:text-xl font-bold text-brand-700">Announcements</h1>
+        <h1 class="text-base sm:text-xl font-bold text-brand-700">Events</h1>
     </div>
 
     {% if announcements %}
@@ -142,7 +142,7 @@
             {% endfor %}
         </div>
     {% else %}
-        <p class="text-slate-500 text-sm">No announcements yet. Check back later.</p>
+        <p class="text-slate-500 text-sm">No events yet. Check back later.</p>
     {% endif %}
 </div>
 

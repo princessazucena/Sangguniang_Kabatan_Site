@@ -66,7 +66,7 @@ def _announcement_items(sb, role: str) -> List[Dict[str, Any]]:
         items.append({
             "id":         f"anc-{r['id']}",
             "kind":       "announcement",
-            "title":      r.get("title") or "Announcement",
+            "title":      r.get("title") or "Event",
             "body":       _truncate(r.get("body") or ""),
             "category":   r.get("category") or "general",
             "status":     r.get("status"),
@@ -104,7 +104,7 @@ def _student_status_item(sb, student_id: str) -> Optional[Dict[str, Any]]:
             "kind":       "status",
             "title":      "Application approved",
             "body":       "Your scholarship application has been approved. "
-                          "Watch out for the next pay-out announcement.",
+                          "Watch out for the next pay-out event.",
             "category":   "verified",
             "status":     "verified",
             "created_at": reviewed_at,

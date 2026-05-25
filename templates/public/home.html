@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Announcements · Sangguniang Kabataan ng Bukal Scholarship Portal{% endblock %}
+{% block title %}Events · Sangguniang Kabataan ng Bukal Scholarship Portal{% endblock %}
 
 {% set slides = [
     'images/473265073_122186308370131251_417259699920810235_n.jpg',
@@ -23,7 +23,7 @@
         <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold drop-shadow">Apply for your scholarship</h1>
         <p class="mt-2 max-w-2xl text-xs sm:text-base text-brand-100 drop-shadow">
             Submit your documents online, track your application status, and stay
-            updated through official announcements from the scholarship office.
+            updated through official events from the scholarship office.
         </p>
     </div>
 
@@ -59,7 +59,7 @@
     'general':      'bg-slate-100 text-slate-700',
 } %}
 
-<h2 class="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-brand-700">Latest announcements</h2>
+<h2 class="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-brand-700">Latest events</h2>
 {% if announcements %}
     <div class="space-y-3 sm:space-y-4">
         {% for a in announcements %}
@@ -150,7 +150,7 @@
         {% endfor %}
     </div>
 {% else %}
-    <p class="text-slate-500 text-sm">No announcements yet. Check back later.</p>
+    <p class="text-slate-500 text-sm">No events yet. Check back later.</p>
 {% endif %}
 
 <script>

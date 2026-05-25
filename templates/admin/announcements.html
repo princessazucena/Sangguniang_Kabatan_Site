@@ -1,5 +1,5 @@
 {% extends "admin/_layout.html" %}
-{% block title %}Announcements · Admin{% endblock %}
+{% block title %}Events · Admin{% endblock %}
 
 {% set status_styles = {
     'open':        'bg-green-100 text-green-800',
@@ -17,7 +17,7 @@
 {% block admin_content %}
 <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
     <div>
-        <h1 class="text-2xl font-bold text-brand-700">Announcements</h1>
+        <h1 class="text-2xl font-bold text-brand-700">Events</h1>
         <p class="text-sm text-slate-500">
             {{ announcements|length }} published
         </p>
@@ -25,7 +25,7 @@
     <button type="button" data-announce-open
             class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium">
         <i class="fa-solid fa-plus"></i>
-        Create announcement
+        Create event
     </button>
 </div>
 
@@ -83,7 +83,7 @@
                         {% endif %}
                         <form method="post"
                               action="{{ url_for('admin.delete_announcement', anc_id=a.id) }}"
-                              onsubmit="return confirm({% if a.category == 'registration' %}'Delete this registration announcement? This will also remove every application (pending, verified, or rejected) tied to this window and the files they uploaded. Verified students will no longer count as scholars.'{% elif a.category in ('payout', 'general_orientation') %}'Delete this announcement? Joiners attached to it will also be removed.'{% else %}'Delete this announcement?'{% endif %});"
+                              onsubmit="return confirm({% if a.category == 'registration' %}'Delete this registration event? This will also remove every application (pending, verified, or rejected) tied to this window and the files they uploaded. Verified students will no longer count as scholars.'{% elif a.category in ('payout', 'general_orientation') %}'Delete this event? Joiners attached to it will also be removed.'{% else %}'Delete this event?'{% endif %});"
                               class="ml-auto">
                             <button type="submit"
                                     class="text-xs text-red-600 hover:underline">
@@ -99,7 +99,7 @@
 {% else %}
     <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-10 text-center">
         <i class="fa-solid fa-bullhorn text-4xl text-slate-300 mb-3"></i>
-        <p class="text-slate-500 text-sm">No announcements yet. Click <span class="font-medium text-brand-600">Create announcement</span> above to publish your first.</p>
+        <p class="text-slate-500 text-sm">No events yet. Click <span class="font-medium text-brand-600">Create event</span> above to publish your first.</p>
     </div>
 {% endif %}
 
@@ -110,7 +110,7 @@
     <div class="absolute inset-0 bg-slate-900/60" data-announce-close></div>
     <div class="relative bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
         <div class="flex items-center justify-between px-5 py-3 border-b">
-            <h2 id="announce-title" class="text-lg font-bold text-brand-700">Post announcement</h2>
+            <h2 id="announce-title" class="text-lg font-bold text-brand-700">Post event</h2>
             <button type="button" data-announce-close
                     class="text-slate-400 hover:text-slate-600" aria-label="Close">
                 <i class="fa-solid fa-xmark text-lg"></i>
@@ -158,7 +158,7 @@
 
             <fieldset class="border border-slate-200 rounded-md p-3 pt-2">
                 <legend class="px-1 text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                    Where should this announcement appear?
+                    Where should this event appear?
                 </legend>
                 <p class="text-xs text-slate-500 mb-2">
                     Pumili ng kahit isa. Default: lahat.

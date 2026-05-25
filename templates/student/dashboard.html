@@ -62,7 +62,7 @@
                             You're a verified scholar
                         </p>
                         <p class="text-xs text-green-800">
-                            Watch the announcements for the next pay-out.
+                            Watch the events for the next pay-out.
                         </p>
                     </div>
                 </div>
@@ -103,7 +103,7 @@
                             Registration closed
                         </p>
                         <p class="text-xs text-slate-600">
-                            Watch the announcements for the next window.
+                            Watch the events for the next window.
                         </p>
                     </div>
                 </div>
@@ -154,7 +154,7 @@
             {{ quick_action(
                 url_for('student.announcements'),
                 'fa-bullhorn',
-                'Announcements',
+                'Events',
                 'See updates and events'
             ) }}
             {% if active_application %}
@@ -283,16 +283,16 @@
                 <p class="px-4 py-6 text-xs text-slate-500 text-center">
                     Wala ka pang sinasaling event. Tingnan mo ang
                     <a href="{{ url_for('student.announcements') }}"
-                       class="text-brand-600 hover:underline">announcements</a>.
+                       class="text-brand-600 hover:underline">events</a>.
                 </p>
             {% endif %}
         </section>
     </div>
 
-    {# ---------- Latest announcements ---------- #}
+    {# ---------- Latest events ---------- #}
     <section class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <header class="px-4 py-3 border-b flex items-center justify-between">
-            <h2 class="font-semibold text-sm">Latest announcements</h2>
+            <h2 class="font-semibold text-sm">Latest events</h2>
             <a href="{{ url_for('student.announcements') }}" class="text-xs text-brand-600 hover:underline">
                 See all &rarr;
             </a>
@@ -322,7 +322,7 @@
                 {% endfor %}
             </ul>
         {% else %}
-            <p class="px-4 py-6 text-xs text-slate-500 text-center">No announcements yet.</p>
+            <p class="px-4 py-6 text-xs text-slate-500 text-center">No events yet.</p>
         {% endif %}
     </section>
 </div>

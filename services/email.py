@@ -98,14 +98,14 @@ def send_application_decision_email(
             "<p>Good news — your scholarship application has been "
             "<strong>approved / verified</strong> by the Sangguniang "
             "Kabataan ng Bukal.</p>"
-            "<p>Please watch the Announcements page in the portal "
+            "<p>Please watch the Events page in the portal "
             "for the schedule of the next pay-out.</p>"
             "<p>Thank you,<br/>SK ng Bukal Scholarship Portal</p>"
         )
         text = (
             f"Hi {name},\n\n"
             "Your scholarship application has been approved / verified.\n"
-            "Please watch the Announcements page for the next pay-out schedule.\n\n"
+            "Please watch the Events page for the next pay-out schedule.\n\n"
             "— SK ng Bukal Scholarship Portal"
         )
     elif decision == "rejected":
@@ -169,16 +169,16 @@ _CATEGORY_PRETTY = {
     "registration":        "Scholarship Registration",
     "payout":              "Scholarship Pay Out",
     "general_orientation": "General Orientation",
-    "general":             "General announcement",
+    "general":             "General event",
 }
 
 
 def _build_announcement_email(announcement: dict) -> tuple[str, str, str]:
     """Return (subject, html, text) for a given announcement record."""
-    title    = (announcement.get("title") or "Announcement").strip()
+    title    = (announcement.get("title") or "Event").strip()
     body     = (announcement.get("body") or "").strip()
     category = announcement.get("category") or "general"
-    cat_label = _CATEGORY_PRETTY.get(category, "Announcement")
+    cat_label = _CATEGORY_PRETTY.get(category, "Event")
     start    = _format_ph_dt(announcement.get("start_at"))
     end      = _format_ph_dt(announcement.get("end_at"))
 
