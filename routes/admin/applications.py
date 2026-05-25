@@ -38,20 +38,86 @@ def applications():
 
     counts = {"pending": 0, "verified": 0, "rejected": 0}
     apps: list[dict] = []
+    orphan_count = 0
     if complete_ids:
-        apps = (
+        rows = (
             sb.table("applications")
-            .select("id, status, created_at, reviewed_at, notes, "
+            .select("id, status, created_at, reviewed_at, notes, registration_id, "
                     "student:profiles!applications_student_id_fkey(id, full_name)")
             .in_("id", list(complete_ids))
             .order("created_at", desc=True)
             .execute()
         ).data or []
 
+        # Hide applications whose registration window was deleted. They're
+        # orphans — the admin can purge them with the dedicated action.
+        for r in rows:
+            if r.get("registration_id") is None:
+                orphan_count += 1
+                continue
+            apps.append(r)
+
         for a in apps:
             counts[a["status"]] = counts.get(a["status"], 0) + 1
 
-    return render_template("admin/applications.html", applications=apps, counts=counts)
+    return render_template(
+        "admin/applications.html",
+        applications=apps,
+        counts=counts,
+        orphan_count=orphan_count,
+    )
+
+
+@admin_bp.route("/applications/orphans/purge", methods=["POST"])
+@admin_required
+def purge_orphan_applications():
+    """
+    Delete applications whose registration announcement no longer exists.
+
+    These are old rows from before the cascade-delete fix where the FK
+    set ``registration_id`` to NULL. The action wipes the application
+    files (DB + storage) and the application rows themselves so they
+    stop appearing in admin views and verified students stop being
+    treated as scholars.
+    """
+    sb = get_supabase()
+    rows = (
+        sb.table("applications")
+        .select("id")
+        .is_("registration_id", "null")
+        .execute()
+    ).data or []
+    app_ids = [r["id"] for r in rows]
+    if not app_ids:
+        flash("Walang orphan applications. Malinis na ang lahat.", "success")
+        return redirect(url_for("admin.applications"))
+
+    # Pull every file row for those applications so we can clean up
+    # storage objects too.
+    files = (
+        sb.table("application_files")
+        .select("id, storage_path")
+        .in_("application_id", app_ids)
+        .execute()
+    ).data or []
+    paths = [f["storage_path"] for f in files if f.get("storage_path")]
+    if paths:
+        try:
+            sb.storage.from_(get_bucket_name()).remove(paths)
+        except Exception:
+            # Don't block the row delete on storage hiccups.
+            pass
+
+    sb.table("application_files").delete().in_("application_id", app_ids).execute()
+    sb.table("applications").delete().in_("id", app_ids).execute()
+
+    flash(
+        f"Purged {len(app_ids)} orphan application"
+        f"{'s' if len(app_ids) != 1 else ''} and {len(files)} file"
+        f"{'s' if len(files) != 1 else ''}.",
+        "success",
+    )
+    return redirect(url_for("admin.applications"))
 
 
 # ---------------------------------------------------------------------------
@@ -65,7 +131,7 @@ def review(app_id: int):
     app_res = (
         sb.table("applications")
         .select("id, status, notes, created_at, reviewed_at, "
-                "education_level, year_level, "
+                "education_level, year_level, registration_id, "
                 "student:profiles!applications_student_id_fkey("
                 "id, full_name, first_name, middle_name, last_name, suffix, "
                 "facebook_url, created_at, "
@@ -77,6 +143,11 @@ def review(app_id: int):
     )
     if not app_res.data:
         flash("Application not found.", "error")
+        return redirect(url_for("admin.applications"))
+
+    if app_res.data.get("registration_id") is None:
+        flash("This application is orphaned (its registration was deleted). "
+              "Use Purge orphans to clean it up.", "error")
         return redirect(url_for("admin.applications"))
 
     files = (

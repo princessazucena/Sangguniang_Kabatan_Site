@@ -144,9 +144,18 @@ def registration_window_active(app_row: dict) -> bool:
 
 
 def student_has_verified_application(applications: list[dict]) -> bool:
-    """True if the student already has *any* verified application.
+    """True if the student already has *any* verified application that is
+    still tied to an active registration window.
 
     Once a student is verified for a registration window, they are
-    locked in for that cycle — no new applications, no banners.
+    locked in for that cycle — no new applications, no banners. But if
+    the registration was deleted, the application is treated as an
+    orphan and the lock-out no longer applies.
     """
-    return any(a.get("status") == "verified" for a in applications)
+    for a in applications:
+        if a.get("status") != "verified":
+            continue
+        if a.get("registration_id") is None:
+            continue
+        return True
+    return False

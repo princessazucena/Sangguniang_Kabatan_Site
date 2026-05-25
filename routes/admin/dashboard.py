@@ -62,7 +62,11 @@ def dashboard():
         .execute()
     ).data or []
     submitted_ids = submitted_application_ids(sb)
-    apps = [a for a in all_apps if a["id"] in submitted_ids]
+    # Drop orphans (registration deleted) and keep only fully submitted.
+    apps = [
+        a for a in all_apps
+        if a["id"] in submitted_ids and a.get("registration_id") is not None
+    ]
 
     status_counts = Counter(a["status"] for a in apps)
     pending_count   = status_counts.get("pending", 0)

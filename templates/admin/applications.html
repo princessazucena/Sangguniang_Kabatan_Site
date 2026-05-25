@@ -8,10 +8,32 @@
 } %}
 
 {% block admin_content %}
-<div class="mb-5">
-    <h1 class="text-2xl font-bold text-brand-700">Applications</h1>
-    <p class="text-sm text-slate-500">All submitted scholarship applications.</p>
+<div class="mb-5 flex items-start justify-between gap-3 flex-wrap">
+    <div>
+        <h1 class="text-2xl font-bold text-brand-700">Applications</h1>
+        <p class="text-sm text-slate-500">All submitted scholarship applications.</p>
+    </div>
+    {% if orphan_count and orphan_count > 0 %}
+        <form method="post" action="{{ url_for('admin.purge_orphan_applications') }}"
+              onsubmit="return confirm('Purge {{ orphan_count }} orphan application{{ '' if orphan_count == 1 else 's' }} (their registration was deleted)? This permanently removes the rows and their uploaded files. Verified students from those windows will stop being scholars.');">
+            <button type="submit"
+                    class="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-red-50 hover:bg-red-100 text-red-700 text-sm font-medium border border-red-200">
+                <i class="fa-solid fa-broom"></i>
+                Purge {{ orphan_count }} orphan{{ '' if orphan_count == 1 else 's' }}
+            </button>
+        </form>
+    {% endif %}
 </div>
+
+{% if orphan_count and orphan_count > 0 %}
+    <div class="mb-5 p-3 sm:p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs sm:text-sm flex items-start gap-2 sm:gap-3">
+        <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+        <div>
+            <p class="font-semibold">May {{ orphan_count }} orphan application{{ '' if orphan_count == 1 else 's' }}.</p>
+            <p>Naka-tag silang verified/rejected/pending pero burado na ang kanilang registration window. Hindi na sila lalabas sa list pero nasa database pa rin. Pindutin ang <span class="font-medium">Purge orphans</span> para tuluyan silang tanggalin.</p>
+        </div>
+    </div>
+{% endif %}
 
 <div class="grid sm:grid-cols-3 gap-4 mb-6">
     {% for key in ['pending', 'verified', 'rejected'] %}

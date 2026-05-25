@@ -36,6 +36,7 @@ def monitoring():
     verified = (
         sb.table("applications")
         .select("id, status, education_level, year_level, reviewed_at, created_at, "
+                "registration_id, "
                 "student:profiles!applications_student_id_fkey(id, full_name), "
                 "registration:announcements!applications_registration_id_fkey("
                 "id, title, start_at, end_at)")
@@ -43,6 +44,10 @@ def monitoring():
         .order("reviewed_at", desc=True)
         .execute()
     ).data or []
+
+    # Drop orphans: verified rows whose registration was deleted. They no
+    # longer count toward scholar totals.
+    verified = [v for v in verified if v.get("registration_id") is not None]
 
     # Decorate every row with display labels so the template stays clean.
     for v in verified:

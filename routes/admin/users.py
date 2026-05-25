@@ -164,13 +164,17 @@ def user_detail(student_id: str):
     applications = (
         sb.table("applications")
         .select("id, status, education_level, year_level, notes, "
-                "created_at, reviewed_at, "
+                "created_at, reviewed_at, registration_id, "
                 "registration:announcements!applications_registration_id_fkey("
                 "id, title, start_at, end_at)")
         .eq("student_id", student_id)
         .order("created_at", desc=True)
         .execute()
     ).data or []
+
+    # Drop orphan applications (registration was deleted) so they don't
+    # show up here either.
+    applications = [a for a in applications if a.get("registration_id") is not None]
 
     # Only show applications the student has fully submitted (every
     # required slot uploaded for the chosen level).
