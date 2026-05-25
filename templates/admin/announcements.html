@@ -83,7 +83,7 @@
                         {% endif %}
                         <form method="post"
                               action="{{ url_for('admin.delete_announcement', anc_id=a.id) }}"
-                              onsubmit="return confirm('Delete this announcement?');"
+                              onsubmit="return confirm({% if a.category == 'registration' %}'Delete this registration announcement? This will also remove every application (pending, verified, or rejected) tied to this window and the files they uploaded. Verified students will no longer count as scholars.'{% elif a.category in ('payout', 'kk_assembly') %}'Delete this announcement? Joiners attached to it will also be removed.'{% else %}'Delete this announcement?'{% endif %});"
                               class="ml-auto">
                             <button type="submit"
                                     class="text-xs text-red-600 hover:underline">

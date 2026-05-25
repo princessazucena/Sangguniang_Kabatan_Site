@@ -7,7 +7,7 @@ announcements.
 import threading
 from flask import render_template, request, redirect, url_for, flash, session, current_app
 
-from supabase_client import get_supabase
+from supabase_client import get_supabase, get_bucket_name
 from services.announcements import (
     CATEGORIES, CATEGORY_LABELS, JOINABLE_CATEGORIES, SCHEDULED_CATEGORIES,
     annotate, schedule_status,
@@ -168,7 +168,87 @@ def announcement_joiners(anc_id: int):
 @admin_bp.route("/announcements/<int:anc_id>/delete", methods=["POST"])
 @admin_required
 def delete_announcement(anc_id: int):
+    """
+    Delete an announcement and any data tied to its window.
+
+    For registration windows, this also wipes every application created
+    against this announcement — pending, verified, or rejected — together
+    with the uploaded files in Supabase storage. That way a deleted
+    registration leaves no scholar records behind, so a previously
+    verified student stops being a scholar.
+
+    Pay-out / KK assembly joiners are removed automatically by the
+    foreign-key cascade on ``announcement_joins``.
+    """
     sb = get_supabase()
+
+    anc = (
+        sb.table("announcements")
+        .select("id, category, title")
+        .eq("id", anc_id)
+        .single()
+        .execute()
+    ).data
+    if not anc:
+        flash("Announcement not found.", "error")
+        return redirect(url_for("admin.announcements"))
+
+    summary_bits: list[str] = []
+
+    if anc.get("category") == "registration":
+        # Find all applications attached to this registration first so we
+        # can clean up storage objects + DB rows in the right order.
+        apps = (
+            sb.table("applications")
+            .select("id")
+            .eq("registration_id", anc_id)
+            .execute()
+        ).data or []
+        app_ids = [a["id"] for a in apps]
+
+        deleted_files = 0
+        if app_ids:
+            files = (
+                sb.table("application_files")
+                .select("id, storage_path")
+                .in_("application_id", app_ids)
+                .execute()
+            ).data or []
+            paths = [f["storage_path"] for f in files if f.get("storage_path")]
+            if paths:
+                try:
+                    sb.storage.from_(get_bucket_name()).remove(paths)
+                except Exception:
+                    # Don't block the delete on storage hiccups; the
+                    # rows are still removed and the blobs become orphans
+                    # that we can sweep later.
+                    current_app.logger.exception(
+                        "Storage cleanup failed during registration delete"
+                    )
+
+            # application_files has on-delete cascade from applications,
+            # but be explicit so this still works even if the schema ever
+            # loses that cascade.
+            sb.table("application_files").delete().in_("application_id", app_ids).execute()
+            sb.table("applications").delete().in_("id", app_ids).execute()
+            deleted_files = len(files)
+
+        if app_ids:
+            summary_bits.append(
+                f"{len(app_ids)} application{'s' if len(app_ids) != 1 else ''}"
+            )
+        if deleted_files:
+            summary_bits.append(
+                f"{deleted_files} uploaded file{'s' if deleted_files != 1 else ''}"
+            )
+
     sb.table("announcements").delete().eq("id", anc_id).execute()
-    flash("Announcement deleted.", "success")
+
+    if summary_bits:
+        flash(
+            "Announcement deleted, along with " + ", ".join(summary_bits) + ".",
+            "success",
+        )
+    else:
+        flash("Announcement deleted.", "success")
     return redirect(url_for("admin.announcements"))
