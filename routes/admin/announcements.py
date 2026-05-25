@@ -4,8 +4,13 @@ Admin → Announcements sidebar button.
 Create / list / delete announcements, plus the joiners list for pay-out
 announcements.
 """
+import io
+import re
 import threading
-from flask import render_template, request, redirect, url_for, flash, session, current_app
+from flask import (
+    render_template, request, redirect, url_for, flash, session,
+    current_app, send_file,
+)
 
 from supabase_client import get_supabase, get_bucket_name
 from services.announcements import (
@@ -13,6 +18,7 @@ from services.announcements import (
     annotate, schedule_status,
 )
 from services.email import broadcast_announcement_email
+from services.joiner_sheet import build_joiner_sheet
 
 from ._common import admin_bp, admin_required, parse_dt_local
 
@@ -180,7 +186,7 @@ def announcement_joiners(anc_id: int):
 
     joins = (
         sb.table("announcement_joins")
-        .select("joined_at, "
+        .select("joined_at, signed_at, signature_data, "
                 "student:profiles!announcement_joins_student_id_fkey(id, full_name)")
         .eq("announcement_id", anc_id)
         .order("joined_at", desc=True)
@@ -191,6 +197,50 @@ def announcement_joiners(anc_id: int):
         "admin/announcement_joiners.html",
         announcement=anc,
         joins=joins,
+    )
+
+
+@admin_bp.route("/announcements/<int:anc_id>/joiners.pdf")
+@admin_required
+def announcement_joiners_pdf(anc_id: int):
+    """Stream a printable attendance sheet PDF for the joiners."""
+    sb = get_supabase()
+    anc = (
+        sb.table("announcements").select("*").eq("id", anc_id).single().execute()
+    ).data
+    if not anc:
+        flash("Announcement not found.", "error")
+        return redirect(url_for("admin.announcements"))
+
+    if anc.get("category") not in JOINABLE_CATEGORIES:
+        flash("Only pay-out and General Orientation events have joiners.", "error")
+        return redirect(url_for("admin.announcements"))
+
+    joins = (
+        sb.table("announcement_joins")
+        .select("joined_at, signed_at, signature_data, "
+                "student:profiles!announcement_joins_student_id_fkey(id, full_name)")
+        .eq("announcement_id", anc_id)
+        .order("joined_at", desc=False)
+        .execute()
+    ).data or []
+
+    pdf_bytes = build_joiner_sheet(
+        event_title=anc.get("title") or "",
+        event_kind=anc.get("category") or "",
+        event_start=anc.get("start_at"),
+        event_end=anc.get("end_at"),
+        joins=joins,
+    )
+
+    safe = re.sub(r"[^A-Za-z0-9]+", "_", anc.get("title") or "event").strip("_") or "event"
+    filename = f"{safe}_attendance.pdf"
+
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename,
     )
 
 

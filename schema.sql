@@ -47,6 +47,8 @@ create table if not exists public.announcement_joins (
     announcement_id bigint not null references public.announcements(id) on delete cascade,
     student_id      uuid   not null references public.profiles(id)      on delete cascade,
     joined_at       timestamptz not null default now(),
+    signature_data  text,
+    signed_at       timestamptz,
     unique (announcement_id, student_id)
 );
 

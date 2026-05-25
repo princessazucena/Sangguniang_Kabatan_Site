@@ -102,71 +102,42 @@
                 radial-gradient(circle at 88% 78%, var(--gold) 0 1.2rem, transparent 1.4rem);
             pointer-events: none;
         }
-        .silhouette {
-            position: absolute;
-            top: 28%;
-            width: 84px;
-            height: 110px;
-            opacity: .15;
-            color: var(--gold);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 110px;
-            line-height: 1;
-        }
-        .silhouette.left  { left: 4%; }
-        .silhouette.right { right: 4%; }
-        .silhouette::before { content: "♟"; }
+        .silhouette { display: none; }
 
         /* ---------- Header strip ---------- */
         .header {
             display: grid;
-            grid-template-columns: 80px 1fr 80px;
+            grid-template-columns: 96px 1fr 96px;
             align-items: center;
             text-align: center;
             padding: 36px 56px 0;
             position: relative;
         }
-        .header .seal {
-            width: 72px;
-            height: 72px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #fff 0 30%, #ffe9bc 60%, #d8b46d 100%);
-            border: 2px solid var(--gold);
-            display: grid;
-            place-items: center;
-            font-family: 'Cinzel', serif;
-            font-weight: 700;
-            font-size: 11px;
-            color: var(--accent-blue);
-            line-height: 1.05;
+        .header .logo-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
         }
-        .header .seal.right {
-            background: radial-gradient(circle, #fff 0 30%, #fde0e1 60%, #e88f92 100%);
-            color: var(--accent-red);
-            font-size: 10px;
-        }
-        .header .republic {
-            font-family: 'Poppins', sans-serif;
-            font-size: 14px;
-            letter-spacing: .14em;
-            text-transform: uppercase;
-            color: var(--ink);
+        .header .logo-wrap img {
+            width: 88px;
+            height: 88px;
+            object-fit: contain;
+            border-radius: 8px;
         }
         .header .org {
             font-family: 'Poppins', sans-serif;
             font-weight: 700;
-            font-size: 22px;
-            letter-spacing: .04em;
+            font-size: 26px;
+            letter-spacing: .06em;
+            text-transform: uppercase;
             color: var(--ink);
-            margin-top: 2px;
         }
         .header .location {
             font-family: 'Poppins', sans-serif;
-            font-size: 12px;
+            font-size: 13px;
             color: var(--ink-muted);
-            margin-top: 2px;
+            margin-top: 4px;
+            letter-spacing: .04em;
         }
 
         .title {
@@ -224,10 +195,13 @@
 
         .signatures {
             margin: 22px 80px 0;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
+            display: flex;
+            justify-content: center;
             text-align: center;
+        }
+        .signatures > div {
+            min-width: 280px;
+            max-width: 360px;
         }
         .sig-line {
             border-top: 1.2px solid var(--ink);
@@ -267,29 +241,7 @@
             opacity: .9;
         }
 
-        .ornament {
-            position: absolute;
-            top: 38%;
-            width: 70px;
-            height: 100px;
-            display: grid;
-            place-items: center;
-        }
-        .ornament .badge {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #fff 0 30%, #fde0e1 60%, #e88f92 100%);
-            border: 2px solid var(--accent-red);
-            display: grid;
-            place-items: center;
-            color: var(--accent-blue);
-            font-family: 'Cinzel', serif;
-            font-weight: 700;
-            font-size: 14px;
-        }
-        .ornament.left  { left: 2%;  }
-        .ornament.right { right: 2%; }
+        .ornament { display: none; }
 
         /* ---------- Print ---------- */
         @media print {
@@ -341,23 +293,17 @@
         <div class="frame-outer"></div>
         <div class="frame-inner"></div>
         <div class="watermark"></div>
-        <span class="silhouette left"  aria-hidden="true"></span>
-        <span class="silhouette right" aria-hidden="true"></span>
 
         <header class="header">
-            <div class="seal" aria-hidden="true">
-                REPUBLIKA<br>NG<br>PILIPINAS
+            <div class="logo-wrap">
+                <img src="{{ url_for('static', filename='images/411138383_122115055322131251_5783589540994116709_n.jpg') }}"
+                     alt="SK Bukal Logo">
             </div>
             <div>
-                <div class="republic">Republic of the Philippines</div>
-                <div class="org">SANGGUNIANG KABATAAN &mdash; BARANGAY</div>
-                <div class="location">
-                    {{ c.barangay }}, {{ c.city }}, {{ c.province }}
-                </div>
+                <div class="org">Sangguniang Kabataan</div>
+                <div class="location">Barangay Bukal, Majayjay, Laguna</div>
             </div>
-            <div class="seal right" aria-hidden="true">
-                SANGGUNIANG<br>KABATAAN
-            </div>
+            <div></div>
         </header>
 
         <h1 class="title">{{ c.title_text or 'CERTIFICATE OF ATTENDANCE' }}</h1>
@@ -390,30 +336,11 @@
             </p>
         </section>
 
-        <span class="ornament left" aria-hidden="true">
-            <span class="badge">SK</span>
-        </span>
-        <span class="ornament right" aria-hidden="true">
-            <span class="badge">KK</span>
-        </span>
-
         <section class="signatures">
             <div>
                 <div class="sig-line">
                     <div class="sig-name">{{ c.sk_chairperson }}</div>
                     <div class="sig-role">SK Chairperson</div>
-                </div>
-            </div>
-            <div>
-                <div class="sig-line">
-                    <div class="sig-name">{{ c.sk_secretary }}</div>
-                    <div class="sig-role">SK Secretary</div>
-                </div>
-            </div>
-            <div>
-                <div class="sig-line">
-                    <div class="sig-name">{{ c.brgy_chairperson }}</div>
-                    <div class="sig-role">(Optional)</div>
                 </div>
             </div>
         </section>

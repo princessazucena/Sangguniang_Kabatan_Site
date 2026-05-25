@@ -89,13 +89,14 @@
                                     <i class="fa-solid fa-circle-check"></i> Joined
                                 </button>
                             {% elif a.status == 'open' %}
-                                <form method="post"
-                                      action="{{ url_for('student.join_payout', anc_id=a.id) }}">
-                                    <button type="submit"
-                                            class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-medium">
-                                        <i class="fa-solid fa-handshake"></i> Join pay-out
-                                    </button>
-                                </form>
+                                <button type="button"
+                                        data-sign-open
+                                        data-anc-id="{{ a.id }}"
+                                        data-event-title="{{ a.title }}"
+                                        data-event-kind="Pay-out"
+                                        class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-medium">
+                                    <i class="fa-solid fa-handshake"></i> Sign &amp; join pay-out
+                                </button>
                             {% elif a.status == 'upcoming' %}
                                 <button type="button" disabled
                                         class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-slate-200 text-slate-500 text-xs sm:text-sm font-medium cursor-not-allowed">
@@ -116,13 +117,14 @@
                                     <i class="fa-solid fa-circle-check"></i> Joined
                                 </button>
                             {% elif a.status == 'open' %}
-                                <form method="post"
-                                      action="{{ url_for('student.join_payout', anc_id=a.id) }}">
-                                    <button type="submit"
-                                            class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-purple-600 hover:bg-purple-700 text-white text-xs sm:text-sm font-medium">
-                                        <i class="fa-solid fa-people-group"></i> Join orientation
-                                    </button>
-                                </form>
+                                <button type="button"
+                                        data-sign-open
+                                        data-anc-id="{{ a.id }}"
+                                        data-event-title="{{ a.title }}"
+                                        data-event-kind="General Orientation"
+                                        class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-purple-600 hover:bg-purple-700 text-white text-xs sm:text-sm font-medium">
+                                    <i class="fa-solid fa-pen-nib"></i> Sign &amp; join orientation
+                                </button>
                             {% elif a.status == 'upcoming' %}
                                 <button type="button" disabled
                                         class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-slate-200 text-slate-500 text-xs sm:text-sm font-medium cursor-not-allowed">
@@ -143,4 +145,206 @@
         <p class="text-slate-500 text-sm">No announcements yet. Check back later.</p>
     {% endif %}
 </div>
+
+{# ===== Signature pad modal — shown when the student taps Sign & join. ===== #}
+<div id="signature-modal"
+     class="hidden fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4"
+     role="dialog" aria-modal="true" aria-labelledby="signature-title">
+    <div class="absolute inset-0 bg-slate-900/60" data-sign-close></div>
+    <form method="post" id="signature-form"
+          class="relative bg-white rounded-xl shadow-xl w-full max-w-md flex flex-col overflow-hidden">
+        <div class="flex items-start gap-3 px-5 py-4 border-b">
+            <span class="w-10 h-10 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-pen-nib"></i>
+            </span>
+            <div class="min-w-0">
+                <h2 id="signature-title" class="text-base sm:text-lg font-bold text-slate-800">
+                    Sign to join
+                </h2>
+                <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                    <span id="signature-event-kind">Event</span> ·
+                    <span id="signature-event-title" class="font-medium text-slate-700"></span>
+                </p>
+            </div>
+        </div>
+        <div class="px-5 py-4 space-y-3">
+            <p class="text-xs sm:text-sm text-slate-600">
+                Pumirma sa loob ng box gamit ang mouse o daliri. Hawakan ang
+                <span class="font-medium">Clear</span> kapag gusto mong simulan ulit.
+            </p>
+            <div class="rounded-lg border border-slate-200 bg-slate-50 overflow-hidden">
+                <canvas id="signature-pad"
+                        width="600" height="220"
+                        class="w-full block touch-none bg-white"></canvas>
+            </div>
+            <div class="flex items-center justify-between">
+                <p id="signature-help" class="text-[11px] text-slate-500"></p>
+                <button type="button" data-sign-clear
+                        class="text-xs text-slate-500 hover:text-slate-700 underline">
+                    Clear
+                </button>
+            </div>
+            <input type="hidden" name="signature" id="signature-data" />
+        </div>
+        <div class="px-5 py-3 border-t flex justify-end gap-2 bg-slate-50">
+            <button type="button" data-sign-close
+                    class="px-3 sm:px-4 py-2 rounded-md bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-sm font-medium">
+                Cancel
+            </button>
+            <button type="submit" id="signature-submit" disabled
+                    class="px-3 sm:px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold disabled:bg-slate-300 disabled:cursor-not-allowed">
+                <i class="fa-solid fa-check mr-1"></i>
+                Confirm join
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+(function () {
+    const modal      = document.getElementById('signature-modal');
+    const form       = document.getElementById('signature-form');
+    const canvas     = document.getElementById('signature-pad');
+    const dataInput  = document.getElementById('signature-data');
+    const submitBtn  = document.getElementById('signature-submit');
+    const help       = document.getElementById('signature-help');
+    const eventTitle = document.getElementById('signature-event-title');
+    const eventKind  = document.getElementById('signature-event-kind');
+    if (!modal || !canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+    let dirty   = false;
+    let lastX = 0, lastY = 0;
+
+    function fitCanvas() {
+        // Match the canvas backing store to its CSS size so strokes
+        // line up with the cursor on high-DPI screens.
+        const rect = canvas.getBoundingClientRect();
+        const ratio = window.devicePixelRatio || 1;
+        canvas.width  = Math.round(rect.width * ratio);
+        canvas.height = Math.round(rect.height * ratio);
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 2.2;
+        ctx.strokeStyle = '#0f172a';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, rect.width, rect.height);
+    }
+
+    function clearPad() {
+        const rect = canvas.getBoundingClientRect();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, rect.width, rect.height);
+        dirty = false;
+        submitBtn.disabled = true;
+        if (help) help.textContent = '';
+        dataInput.value = '';
+    }
+
+    function pointerXY(e) {
+        const rect = canvas.getBoundingClientRect();
+        const t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
+        return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+    }
+
+    function start(e) {
+        e.preventDefault();
+        drawing = true;
+        const p = pointerXY(e);
+        lastX = p.x; lastY = p.y;
+    }
+    function move(e) {
+        if (!drawing) return;
+        e.preventDefault();
+        const p = pointerXY(e);
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        lastX = p.x; lastY = p.y;
+        if (!dirty) {
+            dirty = true;
+            submitBtn.disabled = false;
+            if (help) help.textContent = 'Pirma na-detect. Pwede mo nang i-confirm.';
+        }
+    }
+    function end(e) {
+        drawing = false;
+    }
+
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    canvas.addEventListener('mouseup', end);
+    canvas.addEventListener('mouseleave', end);
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', move, { passive: false });
+    canvas.addEventListener('touchend', end);
+    canvas.addEventListener('touchcancel', end);
+
+    function open(opts) {
+        form.action = opts.action;
+        eventTitle.textContent = opts.title || '';
+        eventKind.textContent  = opts.kind  || 'Event';
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        // Wait a tick for layout, then size the canvas.
+        requestAnimationFrame(function () {
+            fitCanvas();
+            clearPad();
+        });
+    }
+    function close() {
+        modal.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    document.addEventListener('click', function (e) {
+        const trigger = e.target.closest('[data-sign-open]');
+        if (trigger) {
+            open({
+                action: '{{ url_for("student.join_payout", anc_id=0) }}'.replace('/0/', '/' + trigger.dataset.ancId + '/'),
+                title:  trigger.dataset.eventTitle,
+                kind:   trigger.dataset.eventKind,
+            });
+            return;
+        }
+        if (e.target.closest('[data-sign-close]')) { close(); return; }
+        if (e.target.closest('[data-sign-clear]')) { clearPad(); return; }
+    });
+
+    form.addEventListener('submit', function (e) {
+        if (!dirty) {
+            e.preventDefault();
+            if (help) help.textContent = 'Pumirma muna sa box bago mag-confirm.';
+            return;
+        }
+        // Compress to PNG and stash in the hidden field.
+        try {
+            dataInput.value = canvas.toDataURL('image/png');
+        } catch (err) {
+            e.preventDefault();
+            if (help) help.textContent = 'Hindi ma-save ang signature. Subukan ulit.';
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) close();
+    });
+
+    window.addEventListener('resize', function () {
+        if (modal.classList.contains('hidden')) return;
+        // Snapshot the current strokes before re-fitting.
+        const snap = canvas.toDataURL('image/png');
+        fitCanvas();
+        const img = new Image();
+        img.onload = function () {
+            const rect = canvas.getBoundingClientRect();
+            ctx.drawImage(img, 0, 0, rect.width, rect.height);
+        };
+        img.src = snap;
+    });
+})();
+</script>
 {% endblock %}

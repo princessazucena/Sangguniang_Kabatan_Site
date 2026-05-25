@@ -132,7 +132,7 @@ def monitoring():
     if event_ids:
         join_rows = (
             sb.table("announcement_joins")
-            .select("announcement_id, joined_at, "
+            .select("announcement_id, joined_at, signed_at, signature_data, "
                     "student:profiles!announcement_joins_student_id_fkey(id, full_name)")
             .in_("announcement_id", event_ids)
             .order("joined_at", desc=True)

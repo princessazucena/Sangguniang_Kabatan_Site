@@ -279,8 +279,13 @@
                                 <thead class="bg-slate-50 text-slate-600 text-left">
                                     <tr>
                                         <th class="px-4 sm:px-5 py-2">Student</th>
-                                        <th class="px-4 sm:px-5 py-2">Joined on</th>
+                                        <th class="px-4 sm:px-5 py-2">Date of join</th>
+                                        <th class="px-4 sm:px-5 py-2">Signature</th>
                                         <th class="px-4 sm:px-5 py-2 text-right">
+                                            <a href="{{ url_for('admin.announcement_joiners_pdf', anc_id=e['id']) }}"
+                                               class="text-xs text-brand-600 hover:underline mr-3">
+                                                <i class="fa-solid fa-file-pdf"></i> Export PDF
+                                            </a>
                                             <a href="{{ url_for('admin.announcement_joiners', anc_id=e['id']) }}"
                                                class="text-xs text-brand-600 hover:underline">View page &rarr;</a>
                                         </th>
@@ -291,9 +296,20 @@
                                        data-pagination-into="#joiners-pagination-{{ loop.index }}">
                                     {% for j in e['joiners'] %}
                                         <tr data-page-item>
-                                            <td class="px-4 sm:px-5 py-2">{{ j.student.full_name if j.student else '—' }}</td>
+                                            <td class="px-4 sm:px-5 py-2 font-medium text-slate-800">
+                                                {{ j.student.full_name if j.student else '—' }}
+                                            </td>
                                             <td class="px-4 sm:px-5 py-2 text-slate-500">
-                                                {% if j.joined_at %}{{ j.joined_at | ph }}{% else %}—{% endif %}
+                                                {% set when = j.signed_at or j.joined_at %}
+                                                {% if when %}{{ when | ph }}{% else %}—{% endif %}
+                                            </td>
+                                            <td class="px-4 sm:px-5 py-2">
+                                                {% if j.signature_data %}
+                                                    <img src="{{ j.signature_data }}" alt="Signature"
+                                                         class="h-10 w-auto bg-white border border-slate-200 rounded" />
+                                                {% else %}
+                                                    <span class="text-xs text-slate-400">—</span>
+                                                {% endif %}
                                             </td>
                                             <td></td>
                                         </tr>
