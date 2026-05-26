@@ -22,6 +22,7 @@ from . import applications   # noqa: F401
 from . import monitoring     # noqa: F401
 from . import users          # noqa: F401
 from . import announcements  # noqa: F401
+from . import general_announcements  # noqa: F401
 from . import certificates   # noqa: F401
 
 __all__ = ["admin_bp", "admin_required"]

@@ -1,23 +1,10 @@
 {% extends "admin/_layout.html" %}
-{% block title %}Events · Admin{% endblock %}
-
-{% set status_styles = {
-    'open':        'bg-green-100 text-green-800',
-    'upcoming':    'bg-amber-100 text-amber-800',
-    'closed':      'bg-slate-200 text-slate-700',
-    'unscheduled': 'bg-slate-100 text-slate-600',
-} %}
-{% set category_styles = {
-    'registration': 'bg-brand-50 text-brand-700',
-    'payout':       'bg-blue-50 text-blue-700',
-    'general_orientation':  'bg-purple-50 text-purple-700',
-    'general':      'bg-slate-100 text-slate-700',
-} %}
+{% block title %}Announcements · Admin{% endblock %}
 
 {% block admin_content %}
 <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
     <div>
-        <h1 class="text-2xl font-bold text-brand-700">Events</h1>
+        <h1 class="text-2xl font-bold text-brand-700">Announcements</h1>
         <p class="text-sm text-slate-500">
             {{ announcements|length }} published
         </p>
@@ -25,7 +12,7 @@
     <button type="button" data-announce-open
             class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium">
         <i class="fa-solid fa-plus"></i>
-        Create event
+        Create announcement
     </button>
 </div>
 
@@ -33,29 +20,38 @@
     <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <div class="space-y-3 p-3 max-h-[40rem] overflow-y-auto"
              data-paginate data-page-size="15"
-             data-pagination-into="#announcements-pagination">
+             data-pagination-into="#general-anc-pagination">
             {% for a in announcements %}
                 <article id="anc-{{ a.id }}" data-page-item class="bg-white rounded-lg shadow-sm p-4 border border-slate-100 scroll-mt-24">
                     <div class="flex items-start justify-between gap-3 flex-wrap">
                         <div class="min-w-0">
                             <div class="flex items-center gap-2 flex-wrap mb-1">
-                                <span class="text-xs px-2 py-0.5 rounded {{ category_styles.get(a.category, 'bg-slate-100 text-slate-700') }}">
-                                    {{ category_labels.get(a.category, 'General') }}
+                                <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                                    General
                                 </span>
-                                <span class="text-xs uppercase px-2 py-0.5 rounded {{ status_styles.get(a.status, 'bg-slate-100 text-slate-700') }}">
-                                    {{ a.status }}
-                                </span>
+                                {% if not a.is_visible %}
+                                    <span class="text-xs uppercase px-2 py-0.5 rounded bg-slate-200 text-slate-600">
+                                        Expired
+                                    </span>
+                                {% endif %}
                             </div>
                             <h3 class="font-semibold">{{ a.title }}</h3>
                         </div>
                         <time class="text-xs text-slate-500 whitespace-nowrap">{{ a.created_at | ph_date }}</time>
                     </div>
-                    {% if a.start_at and a.end_at %}
+
+                    {% if a.end_at %}
                         <p class="text-xs text-slate-500 mt-1">
-                            <i class="fa-regular fa-calendar mr-1"></i>
-                            {{ a.start_at | ph }} → {{ a.end_at | ph }}
+                            <i class="fa-regular fa-clock mr-1"></i>
+                            Display until {{ a.end_at | ph }}
+                        </p>
+                    {% else %}
+                        <p class="text-xs text-slate-500 mt-1">
+                            <i class="fa-regular fa-clock mr-1"></i>
+                            No expiry — stays visible
                         </p>
                     {% endif %}
+
                     <p class="text-[11px] text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
                         <span class="uppercase tracking-wide">Channels:</span>
                         {% if a.notify_landing %}
@@ -71,22 +67,15 @@
                             <span class="text-slate-400">none</span>
                         {% endif %}
                     </p>
+
                     <p class="mt-2 text-sm text-slate-700 whitespace-pre-line">{{ a.body }}</p>
 
                     <div class="mt-3 flex items-center gap-3 flex-wrap">
-                        {% if a.category in ('payout', 'general_orientation') %}
-                            <a href="{{ url_for('admin.announcement_joiners', anc_id=a.id) }}"
-                               class="text-sm text-brand-600 hover:underline">
-                                <i class="fa-solid fa-users mr-1"></i>
-                                {{ a.join_count or 0 }} joined — view list
-                            </a>
-                        {% endif %}
                         <form method="post"
-                              action="{{ url_for('admin.delete_announcement', anc_id=a.id) }}"
-                              onsubmit="return confirm({% if a.category == 'registration' %}'Delete this registration event? This will also remove every application (pending, verified, or rejected) tied to this window and the files they uploaded. Verified students will no longer count as scholars.'{% elif a.category in ('payout', 'general_orientation') %}'Delete this event? Joiners attached to it will also be removed.'{% else %}'Delete this event?'{% endif %});"
+                              action="{{ url_for('admin.delete_general_announcement', anc_id=a.id) }}"
+                              onsubmit="return confirm('Delete this announcement?');"
                               class="ml-auto">
-                            <button type="submit"
-                                    class="text-xs text-red-600 hover:underline">
+                            <button type="submit" class="text-xs text-red-600 hover:underline">
                                 <i class="fa-solid fa-trash mr-1"></i>Delete
                             </button>
                         </form>
@@ -94,12 +83,12 @@
                 </article>
             {% endfor %}
         </div>
-        <div id="announcements-pagination"></div>
+        <div id="general-anc-pagination"></div>
     </div>
 {% else %}
     <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-10 text-center">
         <i class="fa-solid fa-bullhorn text-4xl text-slate-300 mb-3"></i>
-        <p class="text-slate-500 text-sm">No events yet. Click <span class="font-medium text-brand-600">Create event</span> above to publish your first.</p>
+        <p class="text-slate-500 text-sm">No announcements yet. Click <span class="font-medium text-brand-600">Create announcement</span> above to publish your first.</p>
     </div>
 {% endif %}
 
@@ -110,22 +99,13 @@
     <div class="absolute inset-0 bg-slate-900/60" data-announce-close></div>
     <div class="relative bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
         <div class="flex items-center justify-between px-5 py-3 border-b">
-            <h2 id="announce-title" class="text-lg font-bold text-brand-700">Post event</h2>
+            <h2 id="announce-title" class="text-lg font-bold text-brand-700">Post announcement</h2>
             <button type="button" data-announce-close
                     class="text-slate-400 hover:text-slate-600" aria-label="Close">
                 <i class="fa-solid fa-xmark text-lg"></i>
             </button>
         </div>
         <form method="post" class="flex-1 overflow-y-auto px-5 py-4 space-y-3" id="announce-form">
-            <div>
-                <label class="block text-sm font-medium mb-1">Category</label>
-                <select name="category" id="cat-select" required
-                        class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-400">
-                    <option value="registration">Scholarship Registration</option>
-                    <option value="payout">Scholarship Pay Out</option>
-                    <option value="general_orientation">General Orientation</option>
-                </select>
-            </div>
             <div>
                 <label class="block text-sm font-medium mb-1">Title</label>
                 <input name="title" required
@@ -137,27 +117,18 @@
                           class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"></textarea>
             </div>
 
-            <div id="schedule-fields" class="space-y-3">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Start date &amp; time</label>
-                    <input type="datetime-local" name="start_at"
-                           class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">End date &amp; time</label>
-                    <input type="datetime-local" name="end_at"
-                           class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
-                </div>
-                <p class="text-xs text-slate-500">
-                    For <span class="font-medium">Registration</span>, students can apply / upload only between these dates.<br/>
-                    For <span class="font-medium">Pay Out</span>, students can join only between these dates.<br/>
-                    For <span class="font-medium">General Orientation</span>, students can join only between these dates.
+            <div>
+                <label class="block text-sm font-medium mb-1">Display until <span class="text-slate-400 font-normal">(optional)</span></label>
+                <input type="datetime-local" name="display_until"
+                       class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                <p class="text-xs text-slate-500 mt-1">
+                    Pag walang inilagay, mananatili ang post hanggang manu-manong tanggalin.
                 </p>
             </div>
 
             <fieldset class="border border-slate-200 rounded-md p-3 pt-2">
                 <legend class="px-1 text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                    Where should this event appear?
+                    Where should this announcement appear?
                 </legend>
                 <p class="text-xs text-slate-500 mb-2">
                     Pumili ng kahit isa. Default: lahat.
@@ -205,35 +176,18 @@
 
 <script>
 (function () {
-    // ----- modal open/close -----
     const modal = document.getElementById('announce-modal');
-    if (modal) {
-        function open()  { modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); }
-        function close() { modal.classList.add('hidden');    document.body.classList.remove('overflow-hidden'); }
-        document.addEventListener('click', function (e) {
-            if (e.target.closest('[data-announce-open]'))  { e.preventDefault(); open();  return; }
-            if (e.target.closest('[data-announce-close]')) { close(); return; }
-        });
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && !modal.classList.contains('hidden')) close();
-        });
-
-        // Auto-open the modal if the form was submitted with errors and we
-        // came back to this page; otherwise stay closed.
-        {% if request.method == 'POST' %}open();{% endif %}
-    }
-
-    // ----- show/hide schedule fields based on category -----
-    const cat   = document.getElementById('cat-select');
-    const sched = document.getElementById('schedule-fields');
-    if (cat && sched) {
-        const startInput = sched.querySelector('input[name="start_at"]');
-        const endInput   = sched.querySelector('input[name="end_at"]');
-        // Every event category needs a start/end window.
-        sched.style.display = '';
-        startInput.required = true;
-        endInput.required   = true;
-    }
+    if (!modal) return;
+    function open()  { modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); }
+    function close() { modal.classList.add('hidden');    document.body.classList.remove('overflow-hidden'); }
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('[data-announce-open]'))  { e.preventDefault(); open();  return; }
+        if (e.target.closest('[data-announce-close]')) { close(); return; }
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) close();
+    });
+    {% if request.method == 'POST' %}open();{% endif %}
 })();
 </script>
 {% endblock %}

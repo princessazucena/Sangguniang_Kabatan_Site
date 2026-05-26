@@ -21,6 +21,11 @@ CATEGORY_LABELS = {
     "general":             "General",
 }
 
+# Categories handled by the Events page (admin + student).
+EVENT_CATEGORIES = {"registration", "payout", "general_orientation"}
+# Plain informational posts shown on the Announcements page.
+GENERAL_CATEGORY = "general"
+
 # Categories that need a start/end window and accept "joiners".
 JOINABLE_CATEGORIES = {"payout", "general_orientation"}
 SCHEDULED_CATEGORIES = {"registration", "payout", "general_orientation"}
@@ -64,6 +69,28 @@ def annotate(rows: list[dict]) -> list[dict]:
     for r in rows:
         r["status"] = schedule_status(r)
     return rows
+
+
+def is_general_visible(row: dict, now: Optional[datetime] = None) -> bool:
+    """
+    Decide whether a 'general' announcement should still appear on the
+    feed. The admin's "Display until" date lives in ``end_at``; once it
+    passes the post is hidden from the public/student views (but still
+    kept in the database).
+    """
+    if (row.get("category") or "general") != GENERAL_CATEGORY:
+        return True
+    end = _parse_ts(row.get("end_at"))
+    if not end:
+        # No expiry set means it stays visible.
+        return True
+    return (now or datetime.now(timezone.utc)) <= end
+
+
+def filter_visible(rows: list[dict], now: Optional[datetime] = None) -> list[dict]:
+    """Drop expired general announcements from a list of rows."""
+    now = now or datetime.now(timezone.utc)
+    return [r for r in rows if is_general_visible(r, now)]
 
 
 def current_open_registration(sb) -> Optional[dict]:

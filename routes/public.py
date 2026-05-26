@@ -23,7 +23,7 @@ from flask import (
 )
 
 from supabase_client import get_supabase
-from services.announcements import annotate
+from services.announcements import annotate, filter_visible
 from services import psgc
 
 public_bp = Blueprint("public", __name__)
@@ -177,7 +177,7 @@ def home():
         .limit(20)
         .execute()
     )
-    return render_template("public/home.html", announcements=annotate(res.data or []))
+    return render_template("public/home.html", announcements=annotate(filter_visible(res.data or [])))
 
 
 # -----------------------------------------------------------------

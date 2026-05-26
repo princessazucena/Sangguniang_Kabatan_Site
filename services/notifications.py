@@ -24,7 +24,7 @@ Each item has:
 """
 from typing import List, Dict, Any, Optional
 
-from services.announcements import annotate
+from services.announcements import annotate, filter_visible
 
 
 _CATEGORY_META = {
@@ -51,6 +51,7 @@ def _announcement_items(sb, role: str) -> List[Dict[str, Any]]:
         .limit(50)
         .execute()
     ).data or []
+    rows = filter_visible(rows)
     annotate(rows)
 
     target_endpoint = (
@@ -63,6 +64,11 @@ def _announcement_items(sb, role: str) -> List[Dict[str, Any]]:
     for r in rows:
         meta = _CATEGORY_META.get(r.get("category") or "general",
                                   _CATEGORY_META["general"])
+        # Route general announcements to the dedicated admin page so
+        # the bell icon takes admins to the right list.
+        endpoint = target_endpoint
+        if role == "admin" and (r.get("category") or "general") == "general":
+            endpoint = "admin.general_announcements"
         items.append({
             "id":         f"anc-{r['id']}",
             "kind":       "announcement",
@@ -71,7 +77,7 @@ def _announcement_items(sb, role: str) -> List[Dict[str, Any]]:
             "category":   r.get("category") or "general",
             "status":     r.get("status"),
             "created_at": r.get("created_at"),
-            "endpoint":   target_endpoint,
+            "endpoint":   endpoint,
             "anchor":     f"anc-{r['id']}",
             "icon":       meta["icon"],
             "tone":       meta["tone"],

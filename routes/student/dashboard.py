@@ -12,7 +12,7 @@ from flask import render_template, session
 from supabase_client import get_supabase
 from services.announcements import (
     annotate, schedule_status, current_open_registration,
-    JOINABLE_CATEGORIES,
+    JOINABLE_CATEGORIES, filter_visible,
 )
 
 from ._common import (
@@ -93,9 +93,10 @@ def dashboard():
         sb.table("announcements")
         .select("*")
         .order("created_at", desc=True)
-        .limit(6)
+        .limit(12)
         .execute()
     ).data or []
+    announcements = filter_visible(announcements)[:6]
     annotate(announcements)
 
     joinable_ids = [

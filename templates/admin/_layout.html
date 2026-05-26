@@ -53,6 +53,11 @@
                     <i class="fa-solid fa-bullhorn w-5 text-center"></i>
                     <span>Events</span>
                 </a>
+                <a href="{{ url_for('admin.general_announcements') }}"
+                   class="{{ nav_base }} {% if request.endpoint == 'admin.general_announcements' %}{{ nav_active }}{% else %}{{ nav_idle }}{% endif %}">
+                    <i class="fa-regular fa-newspaper w-5 text-center"></i>
+                    <span>Announcements</span>
+                </a>
                 <a href="{{ url_for('admin.certificates') }}"
                    class="{{ nav_base }} {% if request.endpoint in ['admin.certificates', 'admin.certificate_preview'] %}{{ nav_active }}{% else %}{{ nav_idle }}{% endif %}">
                     <i class="fa-solid fa-certificate w-5 text-center"></i>
@@ -121,6 +126,11 @@
                class="{{ m_base }} {% if request.endpoint in ['admin.announcements', 'admin.announcement_joiners'] %}{{ m_active }}{% else %}{{ m_idle }}{% endif %}">
                 <i class="fa-solid fa-bullhorn w-5 text-center"></i>
                 <span>Events</span>
+            </a>
+            <a href="{{ url_for('admin.general_announcements') }}"
+               class="{{ m_base }} {% if request.endpoint == 'admin.general_announcements' %}{{ m_active }}{% else %}{{ m_idle }}{% endif %}">
+                <i class="fa-regular fa-newspaper w-5 text-center"></i>
+                <span>Announcements</span>
             </a>
             <a href="{{ url_for('admin.certificates') }}"
                class="{{ m_base }} {% if request.endpoint in ['admin.certificates', 'admin.certificate_preview'] %}{{ m_active }}{% else %}{{ m_idle }}{% endif %}">

@@ -15,6 +15,7 @@ from flask import (
 from supabase_client import get_supabase, get_bucket_name
 from services.announcements import (
     CATEGORIES, CATEGORY_LABELS, JOINABLE_CATEGORIES, SCHEDULED_CATEGORIES,
+    EVENT_CATEGORIES,
     annotate, schedule_status,
 )
 from services.email import broadcast_announcement_email
@@ -55,7 +56,7 @@ def announcements():
         notify_inapp   = bool(request.form.get("notify_inapp"))
         notify_email   = bool(request.form.get("notify_email"))
 
-        if category not in CATEGORIES:
+        if category not in EVENT_CATEGORIES:
             flash("Invalid category.", "error")
             return redirect(url_for("admin.announcements"))
         if not title or not body:
@@ -138,6 +139,7 @@ def announcements():
     items = (
         sb.table("announcements")
         .select("*")
+        .in_("category", list(EVENT_CATEGORIES))
         .order("created_at", desc=True)
         .execute()
     ).data or []

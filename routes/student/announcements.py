@@ -10,7 +10,9 @@ from datetime import datetime, timezone
 from flask import render_template, request, redirect, url_for, flash, session
 
 from supabase_client import get_supabase
-from services.announcements import annotate, schedule_status, JOINABLE_CATEGORIES
+from services.announcements import (
+    annotate, schedule_status, JOINABLE_CATEGORIES, filter_visible,
+)
 
 from ._common import student_bp, student_required, student_applications, student_has_verified_application
 
@@ -43,6 +45,7 @@ def announcements():
         .limit(50)
         .execute()
     ).data or []
+    items = filter_visible(items)
     annotate(items)
 
     student_id = session["user_id"]
