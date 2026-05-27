@@ -247,20 +247,24 @@ def build_joiner_sheet(
         ("FONTNAME",   (0, 0), (-1, 0), "Helvetica-Bold"),
         ("FONTSIZE",   (0, 0), (-1, 0), 10),
         ("ALIGN",      (0, 0), (-1, 0), "LEFT"),
+        ("ALIGN",      (0, 0), (0, 0), "CENTER"),
         ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
         ("TOPPADDING",    (0, 0), (-1, 0), 6),
 
         ("FONTNAME",   (0, 1), (-1, -1), "Helvetica"),
         ("FONTSIZE",   (0, 1), (-1, -1), 10),
         ("VALIGN",     (0, 1), (-1, -1), "MIDDLE"),
-        ("ALIGN",      (3, 1), (3, -1), "CENTER"),
+        # Sit the signature under the "Signature" header (both LEFT)
+        ("ALIGN",      (3, 1), (3, -1), "LEFT"),
+        ("LEFTPADDING",  (3, 1), (3, -1), 8),
         ("ALIGN",      (0, 1), (0, -1), "CENTER"),
         ("BOTTOMPADDING", (0, 1), (-1, -1), 8),
         ("TOPPADDING",    (0, 1), (-1, -1), 8),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1),
             [colors.white, colors.HexColor("#f8fafc")]),
-        ("LINEBELOW",  (0, 0), (-1, -1), 0.4, colors.HexColor("#cbd5e1")),
-        ("BOX",        (0, 0), (-1, -1), 0.6, colors.HexColor("#cbd5e1")),
+        # Visible grid: horizontal + vertical lines on every cell.
+        ("GRID",       (0, 0), (-1, -1), 0.6, colors.HexColor("#94a3b8")),
+        ("BOX",        (0, 0), (-1, -1), 0.9, colors.HexColor("#475569")),
     ] + rowspan_style))
 
     story.append(table)
