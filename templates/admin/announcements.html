@@ -31,12 +31,17 @@
 
 {% if announcements %}
     <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        <div class="px-3 py-3 border-b">
+        <div class="px-3 py-3 border-b flex items-center gap-2 flex-wrap">
             <div class="relative w-full sm:w-80">
                 <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                 <input type="search" id="events-search" placeholder="Hanapin sa title, body, o category"
                        class="w-full pl-8 pr-3 py-1.5 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
             </div>
+            <button type="button" data-search-btn="#events-search"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium whitespace-nowrap">
+                <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                Search
+            </button>
         </div>
         <div class="space-y-3 p-3 max-h-[40rem] overflow-y-auto"
              data-paginate data-page-size="15"

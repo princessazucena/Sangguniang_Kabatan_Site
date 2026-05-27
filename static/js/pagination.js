@@ -206,6 +206,15 @@
                 if (pending) clearTimeout(pending);
                 pending = setTimeout(applyFilter, 80);
             });
+            // Pressing Enter applies immediately and prevents a stray
+            // form submission if the input ever lands inside a form.
+            searchInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (pending) { clearTimeout(pending); pending = null; }
+                    applyFilter();
+                }
+            });
         }
 
         // Initial render: show first page of the unfiltered list.
@@ -216,6 +225,20 @@
         document
             .querySelectorAll('[data-paginate]')
             .forEach(init);
+
+        // Wire any "Search" buttons that point at a paginated input
+        // via data-search-btn="#input-id". Clicking the button focuses
+        // the input and fires its input event so the filter applies
+        // immediately.
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-search-btn]');
+            if (!btn) return;
+            const target = document.querySelector(btn.dataset.searchBtn);
+            if (!target) return;
+            e.preventDefault();
+            target.dispatchEvent(new Event('input', { bubbles: true }));
+            target.focus();
+        });
     }
 
     if (document.readyState === 'loading') {

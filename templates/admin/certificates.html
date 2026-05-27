@@ -48,12 +48,17 @@
             Pumili ng okasyon
         </header>
         {% if events %}
-            <div class="px-3 py-3 border-b">
-                <div class="relative">
+            <div class="px-3 py-3 border-b flex items-center gap-2 flex-wrap">
+                <div class="relative flex-1 min-w-0">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                     <input type="search" id="cert-events-search" placeholder="Hanapin ang event"
                            class="w-full pl-8 pr-3 py-1.5 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
                 </div>
+                <button type="button" data-search-btn="#cert-events-search"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium whitespace-nowrap">
+                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                    Search
+                </button>
             </div>
             <ul class="divide-y divide-slate-100 max-h-[34rem] overflow-y-auto"
                 data-paginate data-page-size="50"
