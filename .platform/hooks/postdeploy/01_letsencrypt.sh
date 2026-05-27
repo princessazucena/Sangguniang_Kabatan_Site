@@ -26,8 +26,12 @@ log() { echo "[letsencrypt-hook] $*"; }
 if ! command -v "${CERTBOT_BIN}" >/dev/null 2>&1; then
     log "Installing certbot via pip"
     dnf install -y python3-pip >/dev/null
-    python3 -m pip install --quiet --upgrade pip
-    python3 -m pip install --quiet certbot
+    # Install into a venv so we don't fight the system pip (which is
+    # rpm-managed and cannot be upgraded in-place on Amazon Linux 2023).
+    python3 -m venv /opt/certbot
+    /opt/certbot/bin/pip install --quiet --upgrade pip
+    /opt/certbot/bin/pip install --quiet certbot
+    ln -sf /opt/certbot/bin/certbot "${CERTBOT_BIN}"
 fi
 
 # 2. Request the cert if we don't already have it.
