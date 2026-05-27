@@ -194,18 +194,24 @@ def build_certificate_pdf(ctx: Mapping[str, str]) -> bytes:
     # --- signature block (single SK Chairperson per current template) ---
     sig_y = 150
     chair = ctx.get("sk_chairperson") or ""
-    sig_line_w = 220
+    sig_line_w = 240
     sig_x1 = (PAGE_W - sig_line_w) / 2
     sig_x2 = sig_x1 + sig_line_w
+
+    # Name sits ABOVE the line.
+    c.setFillColor(INK)
+    c.setFont("Helvetica-Bold", 13)
+    c.drawCentredString(PAGE_W / 2, sig_y + 6, chair)
+
+    # Line
     c.setStrokeColor(INK)
     c.setLineWidth(1.0)
     c.line(sig_x1, sig_y, sig_x2, sig_y)
-    c.setFillColor(INK)
-    c.setFont("Helvetica-Bold", 12)
-    c.drawCentredString(PAGE_W / 2, sig_y - 14, chair)
+
+    # Role sits BELOW the line.
     c.setFillColor(INK_MUTED)
     c.setFont("Helvetica", 10)
-    c.drawCentredString(PAGE_W / 2, sig_y - 28, "SK Chairperson")
+    c.drawCentredString(PAGE_W / 2, sig_y - 14, "SK Chairperson")
 
     # --- ribbon footer ---
     ribbon_h = 28
