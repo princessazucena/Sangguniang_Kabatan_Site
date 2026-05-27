@@ -10,3 +10,6 @@ venv/
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
+
+# One-shot maintenance backups (contain real student names/PII)
+backup_profiles_*.csv
