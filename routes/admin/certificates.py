@@ -7,13 +7,20 @@ For each Pay-out and General Orientation announcement, the admin can:
 * Open a print-ready batch page — one Certificate of Attendance per
   joiner, automatically pre-filled from the event details. The browser's
   Print → Save as PDF flow then produces the final document.
+* Email each joiner an individual PDF copy of their certificate, either
+  one at a time or for the whole event in one click.
 """
 from datetime import datetime, timedelta, timezone
 
-from flask import render_template, request, abort, flash, redirect, url_for
+from flask import (
+    render_template, request, abort, flash, redirect, url_for, jsonify,
+    current_app,
+)
 
 from supabase_client import get_supabase
 from services.announcements import CATEGORY_LABELS, annotate, schedule_status
+from services.certificate_pdf import build_certificate_pdf
+from services.email import get_student_email, send_certificate_email
 
 from ._common import admin_bp, admin_required
 
@@ -218,6 +225,7 @@ def generate_certificates(event_id: int):
         ctx = dict(base_ctx)
         ctx["participant_name"] = student.get("full_name") or "—"
         ctx["home_purok"]       = _participant_home()
+        ctx["student_id"]       = student.get("id")
         certificates.append(ctx)
 
     return render_template(
@@ -227,3 +235,151 @@ def generate_certificates(event_id: int):
         event=event,
         event_label=CATEGORY_LABELS.get(event.get("category"), "Event"),
     )
+
+
+# ---------------------------------------------------------------------------
+# Send-by-email actions
+# ---------------------------------------------------------------------------
+
+
+def _safe_filename(name: str) -> str:
+    """Build a download-safe filename like 'Juan_Dela_Cruz_Certificate.pdf'."""
+    cleaned = "".join(ch if ch.isalnum() else "_" for ch in (name or "").strip())
+    cleaned = cleaned.strip("_") or "certificate"
+    return f"{cleaned}_Certificate.pdf"
+
+
+def _load_event_or_404(sb, event_id: int) -> dict:
+    event = (
+        sb.table("announcements")
+        .select("*")
+        .eq("id", event_id)
+        .single()
+        .execute()
+    ).data
+    if not event:
+        abort(404, description="Event not found.")
+    if event.get("category") not in CERTIFICATE_EVENT_CATEGORIES:
+        abort(400, description="Certificates only available for "
+                               "Pay-out or General Orientation events.")
+    return event
+
+
+def _build_ctx_for_student(event: dict, student: dict) -> dict:
+    ctx = dict(_event_context(event))
+    ctx["participant_name"] = student.get("full_name") or "—"
+    ctx["home_purok"]       = _participant_home()
+    return ctx
+
+
+@admin_bp.route("/certificates/<int:event_id>/send/<student_id>", methods=["POST"])
+@admin_required
+def send_certificate_to_student(event_id: int, student_id: str):
+    """Email a single joiner their Certificate of Attendance."""
+    sb = get_supabase()
+    event = _load_event_or_404(sb, event_id)
+
+    join = (
+        sb.table("announcement_joins")
+        .select("student:profiles!announcement_joins_student_id_fkey("
+                "id, full_name)")
+        .eq("announcement_id", event_id)
+        .eq("student_id", student_id)
+        .limit(1)
+        .execute()
+    ).data or []
+    student = (join[0].get("student") if join else None) or None
+    if not student:
+        return jsonify({"ok": False, "error": "Student is not a joiner of this event."}), 404
+
+    email = get_student_email(sb, student_id)
+    if not email:
+        return jsonify({
+            "ok": False,
+            "error": "Walang nakitang email address para sa scholar na ito.",
+        }), 422
+
+    ctx = _build_ctx_for_student(event, student)
+    try:
+        pdf_bytes = build_certificate_pdf(ctx)
+    except Exception:
+        current_app.logger.exception("certificate PDF render failed")
+        return jsonify({"ok": False, "error": "Hindi ma-render ang PDF."}), 500
+
+    ok = send_certificate_email(
+        to_email     = email,
+        student_name = student.get("full_name") or "",
+        event_title  = event.get("title") or "",
+        event_kind   = ctx.get("event_kind") or "",
+        pdf_bytes    = pdf_bytes,
+        filename     = _safe_filename(student.get("full_name") or "certificate"),
+    )
+    if not ok:
+        return jsonify({"ok": False, "error": "Hindi tinanggap ng mail provider."}), 502
+
+    return jsonify({
+        "ok": True,
+        "email": email,
+        "student": student.get("full_name") or "",
+    })
+
+
+@admin_bp.route("/certificates/<int:event_id>/send-all", methods=["POST"])
+@admin_required
+def send_certificates_bulk(event_id: int):
+    """Email every joiner of an event their personal certificate PDF."""
+    sb = get_supabase()
+    event = _load_event_or_404(sb, event_id)
+
+    joins = (
+        sb.table("announcement_joins")
+        .select("student:profiles!announcement_joins_student_id_fkey("
+                "id, full_name)")
+        .eq("announcement_id", event_id)
+        .order("joined_at", desc=False)
+        .execute()
+    ).data or []
+
+    sent: list[str] = []
+    skipped: list[dict] = []
+
+    for j in joins:
+        student = j.get("student") or {}
+        sid     = student.get("id")
+        name    = student.get("full_name") or "Student"
+        if not sid:
+            skipped.append({"student": name, "reason": "missing id"})
+            continue
+
+        email = get_student_email(sb, sid)
+        if not email:
+            skipped.append({"student": name, "reason": "no email"})
+            continue
+
+        try:
+            ctx = _build_ctx_for_student(event, student)
+            pdf_bytes = build_certificate_pdf(ctx)
+        except Exception:
+            current_app.logger.exception("certificate PDF render failed for %s", sid)
+            skipped.append({"student": name, "reason": "pdf error"})
+            continue
+
+        ok = send_certificate_email(
+            to_email     = email,
+            student_name = name,
+            event_title  = event.get("title") or "",
+            event_kind   = ctx.get("event_kind") or "",
+            pdf_bytes    = pdf_bytes,
+            filename     = _safe_filename(name),
+        )
+        if ok:
+            sent.append(name)
+        else:
+            skipped.append({"student": name, "reason": "send failed"})
+
+    return jsonify({
+        "ok":      True,
+        "sent":    len(sent),
+        "skipped": skipped,
+        "total":   len(joins),
+    })

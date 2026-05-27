@@ -8,9 +8,10 @@ Configuration comes from .env:
     BREVO_SENDER_EMAIL   — required (must be a verified sender on Brevo)
     BREVO_SENDER_NAME    — optional, defaults to a generic label
 """
+import base64
 import os
 import logging
-from typing import Optional
+from typing import Iterable, Mapping, Optional
 
 import requests
 
@@ -25,11 +26,16 @@ def send_email(
     subject: str,
     html_content: str,
     text_content: Optional[str] = None,
+    attachments: Optional[Iterable[Mapping[str, object]]] = None,
 ) -> bool:
     """
     Fire-and-forget transactional email. Returns True on a 2xx response.
     Errors are logged but never raised — admin actions should not fail
     just because the mail provider hiccuped.
+
+    ``attachments`` is an optional iterable of mappings shaped like
+    ``{"name": "file.pdf", "content": <bytes>}``. The bytes are
+    base64-encoded for Brevo's ``attachment`` array.
     """
     api_key      = os.environ.get("BREVO_API_KEY")
     sender_email = os.environ.get("BREVO_SENDER_EMAIL")
@@ -47,6 +53,21 @@ def send_email(
     }
     if text_content:
         payload["textContent"] = text_content
+
+    if attachments:
+        encoded = []
+        for att in attachments:
+            content = att.get("content")
+            name    = att.get("name") or "attachment"
+            if not content:
+                continue
+            if isinstance(content, bytes):
+                b64 = base64.b64encode(content).decode("ascii")
+            else:
+                b64 = str(content)
+            encoded.append({"name": str(name), "content": b64})
+        if encoded:
+            payload["attachment"] = encoded
 
     headers = {
         "api-key":      api_key,
@@ -73,6 +94,66 @@ def _student_email(sb, student_id: str) -> Optional[str]:
     except Exception as exc:
         log.warning("auth.admin.get_user_by_id failed: %s", exc)
         return None
+
+
+def get_student_email(sb, student_id: str) -> Optional[str]:
+    """Public wrapper around the auth-email lookup."""
+    return _student_email(sb, student_id)
+
+
+def send_certificate_email(
+    *,
+    to_email: str,
+    student_name: str,
+    event_title: str,
+    event_kind: str,
+    pdf_bytes: bytes,
+    filename: str = "certificate.pdf",
+) -> bool:
+    """
+    Send a single Certificate of Attendance to a student as a PDF
+    attachment. The HTML body greets them by name and references the
+    event so the message reads as a personal copy, not a generic blast.
+    """
+    if not to_email or not pdf_bytes:
+        return False
+
+    name  = student_name or "Student"
+    label = (event_kind or "event").strip() or "event"
+    title = (event_title or "").strip()
+
+    subject = f"Your Certificate of Attendance — {title}" if title \
+              else "Your Certificate of Attendance"
+
+    html = (
+        "<div style='font-family: Arial, sans-serif; max-width: 560px; color:#1f2937;'>"
+        f"<p>Hi {name},</p>"
+        f"<p>Maraming salamat sa pagsali sa <strong>{title or label}</strong>. "
+        "Nakalakip dito ang iyong <strong>Certificate of Attendance</strong> "
+        "bilang opisyal na kopya mo.</p>"
+        "<p>Maaari mong i-save o i-print ang attached PDF para sa records mo.</p>"
+        "<hr style='border:none; border-top:1px solid #e2e8f0; margin:18px 0;'/>"
+        "<p style='color:#6b7280; font-size:12px; margin:0;'>"
+        "Sangguniang Kabataan ng Barangay Bukal · Scholarship Portal"
+        "</p>"
+        "</div>"
+    )
+    text = (
+        f"Hi {name},\n\n"
+        f"Salamat sa pagsali sa {title or label}. "
+        "Nakalakip dito ang iyong Certificate of Attendance bilang "
+        "opisyal na kopya mo.\n\n"
+        "— SK ng Bukal Scholarship Portal"
+    )
+
+    return send_email(
+        to_email,
+        name,
+        subject,
+        html,
+        text,
+        attachments=[{"name": filename, "content": pdf_bytes}],
+    )
 
 
 def send_application_decision_email(

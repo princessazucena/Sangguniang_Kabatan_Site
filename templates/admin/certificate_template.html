@@ -62,6 +62,47 @@
         .toolbar .btn-primary:hover { background: #5a8550; }
         .toolbar .btn-ghost { background: #fff; border-color: #e2e8f0; color: #1f2937; }
         .toolbar .btn-ghost:hover { background: #f1f5f9; }
+        .toolbar .btn-mail { background: #1f3a8a; color: #fff; }
+        .toolbar .btn-mail:hover { background: #1a3071; }
+        .toolbar .btn-mail[disabled] { opacity: .65; cursor: progress; }
+
+        .send-row {
+            position: absolute;
+            top: 14px;
+            right: 28px;
+            z-index: 4;
+            display: flex;
+            gap: 6px;
+            font-family: 'Poppins', sans-serif;
+        }
+        .send-row .send-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid #1f3a8a;
+            background: #1f3a8a;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 6px 14px -8px rgba(31,58,138,.6);
+        }
+        .send-row .send-btn:hover { background: #1a3071; }
+        .send-row .send-btn[disabled] { opacity: .55; cursor: progress; }
+        .send-row .send-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 500;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+        }
+        .send-row .send-status.ok    { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+        .send-row .send-status.err   { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+        .send-row .send-status:empty { display: none; }
 
         .page {
             width: 1056px;
@@ -247,6 +288,7 @@
         @media print {
             body { background: #fff; }
             .toolbar { display: none !important; }
+            .send-row { display: none !important; }
             .page {
                 margin: 0;
                 box-shadow: none;
@@ -281,6 +323,14 @@
            class="btn btn-ghost">
             ← Back
         </a>
+        {% if event %}
+            <button type="button"
+                    class="btn-mail"
+                    id="send-all-btn"
+                    data-url="{{ url_for('admin.send_certificates_bulk', event_id=event.id) }}">
+                ✉ Send all to email
+            </button>
+        {% endif %}
         <button type="button" class="btn-primary" onclick="window.print();">
             🖨 Print / Save as PDF
         </button>
@@ -290,6 +340,18 @@
 
 {% for c in certificates %}
     <div class="page" role="document" aria-label="Certificate of Attendance">
+        {% if not single and event and c.student_id %}
+            <div class="send-row" data-cert-row>
+                <span class="send-status" data-cert-status></span>
+                <button type="button"
+                        class="send-btn"
+                        data-cert-send
+                        data-url="{{ url_for('admin.send_certificate_to_student', event_id=event.id, student_id=c.student_id) }}"
+                        data-name="{{ c.participant_name }}">
+                    ✉ Send to student
+                </button>
+            </div>
+        {% endif %}
         <div class="frame-outer"></div>
         <div class="frame-inner"></div>
         <div class="watermark"></div>
@@ -343,6 +405,99 @@
         </div>
     </div>
 {% endfor %}
+
+{% if not single and event %}
+<script>
+(function () {
+    function setStatus(el, msg, kind) {
+        if (!el) return;
+        el.className = "send-status" + (kind ? " " + kind : "");
+        el.textContent = msg || "";
+    }
+
+    async function postJson(url) {
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Accept": "application/json" },
+            credentials: "same-origin",
+        });
+        let data = {};
+        try { data = await res.json(); } catch (e) { /* non-JSON */ }
+        return { ok: res.ok && data.ok !== false, data, status: res.status };
+    }
+
+    // Per-certificate send buttons.
+    document.querySelectorAll("[data-cert-send]").forEach(function (btn) {
+        btn.addEventListener("click", async function () {
+            const row = btn.closest("[data-cert-row]");
+            const status = row ? row.querySelector("[data-cert-status]") : null;
+            btn.disabled = true;
+            setStatus(status, "Sending…");
+            try {
+                const { ok, data } = await postJson(btn.dataset.url);
+                if (ok) {
+                    setStatus(status, "Sent ✓ " + (data.email || ""), "ok");
+                    btn.textContent = "✓ Sent";
+                } else {
+                    setStatus(status,
+                        (data && data.error) || "Hindi naipadala.",
+                        "err");
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                setStatus(status, "Network error.", "err");
+                btn.disabled = false;
+            }
+        });
+    });
+
+    // Bulk send.
+    const bulkBtn = document.getElementById("send-all-btn");
+    if (bulkBtn) {
+        bulkBtn.addEventListener("click", async function () {
+            const total = document.querySelectorAll("[data-cert-send]").length;
+            const msg = total
+                ? "Ipapadala ang " + total + " certificate(s) sa email ng bawat joiner. Ituloy?"
+                : "Ipapadala ang certificate sa email ng bawat joiner. Ituloy?";
+            if (!window.confirm(msg)) return;
+
+            const original = bulkBtn.textContent;
+            bulkBtn.disabled = true;
+            bulkBtn.textContent = "Sending…";
+            try {
+                const { ok, data } = await postJson(bulkBtn.dataset.url);
+                if (ok) {
+                    const skipped = (data && data.skipped) || [];
+                    const sent    = (data && data.sent) || 0;
+                    let summary = "Naipadala sa " + sent + " na scholar.";
+                    if (skipped.length) {
+                        summary += " " + skipped.length + " ang na-skip:\n" +
+                            skipped.map(function (s) {
+                                return "• " + s.student + " (" + s.reason + ")";
+                            }).join("\n");
+                    }
+                    window.alert(summary);
+                    // Mark every per-cert row as sent so the admin sees the result.
+                    document.querySelectorAll("[data-cert-row]").forEach(function (row) {
+                        const s = row.querySelector("[data-cert-status]");
+                        const b = row.querySelector("[data-cert-send]");
+                        setStatus(s, "Sent ✓", "ok");
+                        if (b) { b.disabled = true; b.textContent = "✓ Sent"; }
+                    });
+                } else {
+                    window.alert((data && data.error) || "Hindi naipadala ang lahat.");
+                }
+            } catch (e) {
+                window.alert("Network error habang nag-send.");
+            } finally {
+                bulkBtn.disabled = false;
+                bulkBtn.textContent = original;
+            }
+        });
+    }
+})();
+</script>
+{% endif %}
 
 </body>
 </html>
