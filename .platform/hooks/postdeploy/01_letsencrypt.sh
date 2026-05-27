@@ -111,7 +111,10 @@ mkdir -p /var/www/letsencrypt
 # 4. Validate config and reload nginx.
 if nginx -t; then
     log "Reloading nginx with HTTPS config"
-    systemctl reload nginx
+    systemctl restart nginx
+    sleep 2
+    log "nginx listeners after restart:"
+    ss -tlnp | grep -E ':(80|443)\b' || log "WARNING: nginx not listening on 80/443"
 else
     log "nginx -t failed — leaving the previous config in place"
     exit 1
