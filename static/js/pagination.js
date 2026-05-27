@@ -1,5 +1,5 @@
 /**
- * Lightweight client-side pagination.
+ * Lightweight client-side pagination + search filter.
  *
  * Mark the container holding the items with:
  *   data-paginate data-page-size="15"
@@ -12,8 +12,13 @@
  * Otherwise the nav is inserted right after the container (or, for a
  * <tbody>, right after its parent <table>).
  *
- * If the total number of items is <= page size, no controls are rendered
- * and all items stay visible.
+ * Optionally wire a live search input by giving the container
+ *   data-paginate-search="#input-id"
+ * The input's text value filters items by their textContent (case
+ * insensitive); pagination is recalculated against the visible subset.
+ *
+ * If the total number of visible items is <= page size, no controls are
+ * rendered and all items stay visible.
  */
 (function () {
     function makeBtn(label, enabled, onClick, opts) {
@@ -80,40 +85,86 @@
 
     function init(container) {
         const pageSize = parseInt(container.dataset.pageSize, 10) || 15;
-        const items = Array.from(
+        const allItems = Array.from(
             container.querySelectorAll(':scope > [data-page-item]')
         );
-        if (items.length === 0) return;
+        if (allItems.length === 0) return;
 
-        const total = items.length;
-        const totalPages = Math.ceil(total / pageSize);
+        // Cache the searchable text for each item once so we don't pay
+        // for textContent traversal on every keystroke.
+        const haystacks = allItems.map((el) =>
+            (el.textContent || '').toLowerCase()
+        );
 
-        // Nothing to do if everything fits.
-        if (totalPages <= 1) return;
+        const searchSel = container.dataset.paginateSearch;
+        const searchInput = searchSel
+            ? document.querySelector(searchSel)
+            : null;
 
-        const nav = document.createElement('nav');
-        nav.className =
-            'pagination-controls flex items-center justify-between gap-3 ' +
-            'flex-wrap px-4 py-3 border-t border-slate-100 bg-slate-50 ' +
-            'text-sm';
-        nav.setAttribute('aria-label', 'Pagination');
+        // ---- Lazy-create the nav so we can show/hide it as the visible
+        // subset crosses the page-size threshold during search.
+        let nav = null;
+        let info = null;
+        let buttons = null;
 
-        const info = document.createElement('span');
-        info.className = 'text-xs text-slate-500';
-        nav.appendChild(info);
+        function ensureNav() {
+            if (nav) return;
+            nav = document.createElement('nav');
+            nav.className =
+                'pagination-controls flex items-center justify-between gap-3 ' +
+                'flex-wrap px-4 py-3 border-t border-slate-100 bg-slate-50 ' +
+                'text-sm';
+            nav.setAttribute('aria-label', 'Pagination');
 
-        const buttons = document.createElement('div');
-        buttons.className = 'flex items-center gap-1 flex-wrap';
-        nav.appendChild(buttons);
+            info = document.createElement('span');
+            info.className = 'text-xs text-slate-500';
+            nav.appendChild(info);
+
+            buttons = document.createElement('div');
+            buttons.className = 'flex items-center gap-1 flex-wrap';
+            nav.appendChild(buttons);
+
+            placeNav(container, nav);
+        }
 
         let current = 1;
+        let visibleItems = allItems.slice();
+
+        function applyFilter() {
+            const q = searchInput
+                ? (searchInput.value || '').trim().toLowerCase()
+                : '';
+            visibleItems = [];
+            allItems.forEach((el, idx) => {
+                const match = !q || haystacks[idx].indexOf(q) !== -1;
+                if (match) {
+                    visibleItems.push(el);
+                } else {
+                    // Hidden by filter (different from hidden by paging).
+                    el.style.display = 'none';
+                }
+            });
+            current = 1;
+            render();
+        }
 
         function render() {
+            const total = visibleItems.length;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            if (current > totalPages) current = totalPages;
+
             const start = (current - 1) * pageSize;
             const end = start + pageSize;
-            items.forEach((el, idx) => {
+            visibleItems.forEach((el, idx) => {
                 el.style.display = idx >= start && idx < end ? '' : 'none';
             });
+
+            if (totalPages <= 1) {
+                if (nav) nav.style.display = 'none';
+                return;
+            }
+            ensureNav();
+            nav.style.display = '';
 
             const shown = Math.min(end, total) - start;
             info.textContent =
@@ -147,7 +198,17 @@
             );
         }
 
-        placeNav(container, nav);
+        if (searchInput) {
+            // Debounced filter so typing fast feels snappy without
+            // hammering layout on every keystroke.
+            let pending = null;
+            searchInput.addEventListener('input', function () {
+                if (pending) clearTimeout(pending);
+                pending = setTimeout(applyFilter, 80);
+            });
+        }
+
+        // Initial render: show first page of the unfiltered list.
         render();
     }
 

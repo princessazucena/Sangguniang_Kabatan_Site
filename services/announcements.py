@@ -47,7 +47,16 @@ def schedule_status(row: dict, now: Optional[datetime] = None) -> str:
     """
     Returns one of: 'upcoming', 'open', 'closed', 'unscheduled'.
     A 'general' announcement (or one missing dates) is 'unscheduled'.
+
+    If the row has a non-null ``manual_status`` ('open' or 'closed'), it
+    short-circuits the schedule check — the admin's manual override
+    wins. ``manual_status`` is set from the Reopen / Close buttons on
+    the Events page.
     """
+    manual = (row.get("manual_status") or "").strip()
+    if manual in ("open", "closed"):
+        return manual
+
     if (row.get("category") or "general") not in SCHEDULED_CATEGORIES:
         return "unscheduled"
 

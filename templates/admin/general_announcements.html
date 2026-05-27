@@ -18,8 +18,16 @@
 
 {% if announcements %}
     <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="px-3 py-3 border-b">
+            <div class="relative w-full sm:w-80">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="search" id="general-anc-search" placeholder="Hanapin sa title o body"
+                       class="w-full pl-8 pr-3 py-1.5 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+            </div>
+        </div>
         <div class="space-y-3 p-3 max-h-[40rem] overflow-y-auto"
              data-paginate data-page-size="15"
+             data-paginate-search="#general-anc-search"
              data-pagination-into="#general-anc-pagination">
             {% for a in announcements %}
                 <article id="anc-{{ a.id }}" data-page-item class="bg-white rounded-lg shadow-sm p-4 border border-slate-100 scroll-mt-24">

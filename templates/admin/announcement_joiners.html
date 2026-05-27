@@ -50,6 +50,13 @@
 
     <h2 class="font-semibold mt-4 mb-2">Joiners ({{ joins | length }})</h2>
     {% if joins %}
+        <div class="mb-3">
+            <div class="relative w-full sm:w-72">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="search" id="joiners-search" placeholder="Hanapin ang pangalan ng joiner"
+                       class="w-full pl-8 pr-3 py-1.5 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+            </div>
+        </div>
         <div class="overflow-x-auto rounded-md border border-slate-100">
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-slate-600 text-left sticky top-0 z-10">
@@ -62,6 +69,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100"
                        data-paginate data-page-size="15"
+                       data-paginate-search="#joiners-search"
                        data-pagination-into="#joiners-pagination">
                     {% for j in joins %}
                         <tr data-page-item>

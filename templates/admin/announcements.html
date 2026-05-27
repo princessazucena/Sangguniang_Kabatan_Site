@@ -31,8 +31,16 @@
 
 {% if announcements %}
     <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="px-3 py-3 border-b">
+            <div class="relative w-full sm:w-80">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="search" id="events-search" placeholder="Hanapin sa title, body, o category"
+                       class="w-full pl-8 pr-3 py-1.5 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+            </div>
+        </div>
         <div class="space-y-3 p-3 max-h-[40rem] overflow-y-auto"
              data-paginate data-page-size="15"
+             data-paginate-search="#events-search"
              data-pagination-into="#announcements-pagination">
             {% for a in announcements %}
                 <article id="anc-{{ a.id }}" data-page-item class="bg-white rounded-lg shadow-sm p-4 border border-slate-100 scroll-mt-24">
@@ -81,6 +89,52 @@
                                 {{ a.join_count or 0 }} joined — view list
                             </a>
                         {% endif %}
+
+                        {# ---- Reopen / Close override ---- #}
+                        {% if a.category in ('registration', 'payout', 'general_orientation') %}
+                            <div class="inline-flex items-center gap-1 flex-wrap text-xs">
+                                {% if a.manual_status %}
+                                    <span class="px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                                        <i class="fa-solid fa-hand mr-1"></i>
+                                        Manually {{ a.manual_status }}
+                                    </span>
+                                    <form method="post"
+                                          action="{{ url_for('admin.set_announcement_status', anc_id=a.id) }}"
+                                          class="inline">
+                                        <input type="hidden" name="manual_status" value="" />
+                                        <button type="submit"
+                                                class="px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 text-slate-700">
+                                            <i class="fa-solid fa-rotate-left mr-1"></i>Use schedule
+                                        </button>
+                                    </form>
+                                {% endif %}
+                                {% if a.status != 'open' %}
+                                    <form method="post"
+                                          action="{{ url_for('admin.set_announcement_status', anc_id=a.id) }}"
+                                          class="inline"
+                                          onsubmit="return confirm('Reopen this event? Students can join again kahit lampas na sa schedule.');">
+                                        <input type="hidden" name="manual_status" value="open" />
+                                        <button type="submit"
+                                                class="px-2 py-1 rounded bg-green-600 hover:bg-green-700 text-white">
+                                            <i class="fa-solid fa-lock-open mr-1"></i>Reopen
+                                        </button>
+                                    </form>
+                                {% endif %}
+                                {% if a.status != 'closed' %}
+                                    <form method="post"
+                                          action="{{ url_for('admin.set_announcement_status', anc_id=a.id) }}"
+                                          class="inline"
+                                          onsubmit="return confirm('Close this event now? Hindi makaka-join ang mga student kahit nasa schedule pa.');">
+                                        <input type="hidden" name="manual_status" value="closed" />
+                                        <button type="submit"
+                                                class="px-2 py-1 rounded bg-slate-600 hover:bg-slate-700 text-white">
+                                            <i class="fa-solid fa-lock mr-1"></i>Close
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
                         <form method="post"
                               action="{{ url_for('admin.delete_announcement', anc_id=a.id) }}"
                               onsubmit="return confirm({% if a.category == 'registration' %}'Delete this registration event? This will also remove every application (pending, verified, or rejected) tied to this window and the files they uploaded. Verified students will no longer count as scholars.'{% elif a.category in ('payout', 'general_orientation') %}'Delete this event? Joiners attached to it will also be removed.'{% else %}'Delete this event?'{% endif %});"

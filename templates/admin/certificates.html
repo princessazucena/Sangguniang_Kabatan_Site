@@ -48,10 +48,20 @@
             Pumili ng okasyon
         </header>
         {% if events %}
-            <ul class="divide-y divide-slate-100 max-h-[34rem] overflow-y-auto">
+            <div class="px-3 py-3 border-b">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="search" id="cert-events-search" placeholder="Hanapin ang event"
+                           class="w-full pl-8 pr-3 py-1.5 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                </div>
+            </div>
+            <ul class="divide-y divide-slate-100 max-h-[34rem] overflow-y-auto"
+                data-paginate data-page-size="50"
+                data-paginate-search="#cert-events-search"
+                data-pagination-into="#cert-events-pagination">
                 {% for e in events %}
                     {% set is_selected = selected and selected.id == e.id %}
-                    <li>
+                    <li data-page-item>
                         <a href="{{ url_for('admin.certificates', event_id=e.id) }}"
                            class="block px-4 py-3 hover:bg-slate-50 transition {{ 'bg-brand-50' if is_selected else '' }}">
                             <div class="flex items-start gap-2 flex-wrap">
@@ -79,6 +89,7 @@
                     </li>
                 {% endfor %}
             </ul>
+            <div id="cert-events-pagination"></div>
         {% else %}
             <div class="px-4 py-8 text-center text-sm text-slate-500">
                 <i class="fa-solid fa-people-group text-2xl text-slate-300 mb-2 block"></i>

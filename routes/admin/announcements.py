@@ -246,6 +246,54 @@ def announcement_joiners_pdf(anc_id: int):
     )
 
 
+@admin_bp.route("/announcements/<int:anc_id>/status", methods=["POST"])
+@admin_required
+def set_announcement_status(anc_id: int):
+    """Force an event open/closed, or clear the override.
+
+    Form field ``manual_status`` accepts ``open``, ``closed``, or empty
+    string (clears the override and falls back to the schedule).
+    """
+    raw = (request.form.get("manual_status") or "").strip().lower()
+    if raw in ("open", "closed"):
+        new_status = raw
+    elif raw in ("", "auto", "schedule"):
+        new_status = None
+    else:
+        flash("Invalid status.", "error")
+        return redirect(url_for("admin.announcements"))
+
+    sb = get_supabase()
+    anc = (
+        sb.table("announcements")
+        .select("id, category, title")
+        .eq("id", anc_id)
+        .single()
+        .execute()
+    ).data
+    if not anc:
+        flash("Event not found.", "error")
+        return redirect(url_for("admin.announcements"))
+
+    if (anc.get("category") or "") not in SCHEDULED_CATEGORIES:
+        flash("This event has no schedule to override.", "error")
+        return redirect(url_for("admin.announcements"))
+
+    sb.table("announcements").update(
+        {"manual_status": new_status}
+    ).eq("id", anc_id).execute()
+
+    label = anc.get("title") or "Event"
+    if new_status == "open":
+        flash(f'"{label}" is now open. Students can join again.', "success")
+    elif new_status == "closed":
+        flash(f'"{label}" is now closed. New joiners are blocked.', "success")
+    else:
+        flash(f'"{label}" reverted to its scheduled window.', "success")
+
+    return redirect(url_for("admin.announcements") + f"#anc-{anc_id}")
+
+
 @admin_bp.route("/announcements/<int:anc_id>/delete", methods=["POST"])
 @admin_required
 def delete_announcement(anc_id: int):

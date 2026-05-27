@@ -24,6 +24,7 @@ from flask import (
 
 from supabase_client import get_supabase
 from services.announcements import annotate, filter_visible
+from services.names import title_name, build_full_name
 from services import psgc
 
 public_bp = Blueprint("public", __name__)
@@ -50,11 +51,7 @@ def _validate_password(password: str) -> str | None:
 # helpers
 # -----------------------------------------------------------------
 def _build_full_name(first: str, middle: str, last: str, suffix: str) -> str:
-    parts = [p for p in [first, middle, last] if p]
-    name = " ".join(parts)
-    if suffix:
-        name = f"{name} {suffix}"
-    return name
+    return build_full_name(first, middle, last, suffix)
 
 
 def _generate_code() -> str:
@@ -270,10 +267,10 @@ def signup():
             sb.table("profiles").upsert({
                 "id":             user.id,
                 "full_name":      full_name,
-                "first_name":     form["first_name"],
-                "middle_name":    form["middle_name"] or None,
-                "last_name":      form["last_name"],
-                "suffix":         form["suffix"] or None,
+                "first_name":     title_name(form["first_name"]),
+                "middle_name":    title_name(form["middle_name"]) or None,
+                "last_name":      title_name(form["last_name"]),
+                "suffix":         title_name(form["suffix"]) or None,
                 "facebook_url":   form["facebook_url"],
                 "address_house_no": form["address_house_no"] or None,
                 "address_street":   form["address_street"] or None,
@@ -551,7 +548,8 @@ def login():
 
         prof = (
             sb.table("profiles")
-            .select("id, full_name, role, email_verified, is_active")
+            .select("id, full_name, first_name, middle_name, last_name, "
+                    "suffix, role, email_verified, is_active")
             .eq("id", user.id)
             .single()
             .execute()
@@ -579,6 +577,46 @@ def login():
                 "lockout_until":         None,
             }).eq("id", user.id).execute()
         except Exception:
+            pass
+
+        # Retroactively normalize names to Title Case so historic rows
+        # like "TYARISSE ANN cortez BANAY" or "ken justin carreon" show
+        # up cleanly across the portal (joiner sheet, certificates, admin
+        # views). We only push an update when the stored values differ.
+        try:
+            current_first  = prof.data.get("first_name")  or ""
+            current_middle = prof.data.get("middle_name") or ""
+            current_last   = prof.data.get("last_name")   or ""
+            current_suffix = prof.data.get("suffix")      or ""
+            current_full   = prof.data.get("full_name")   or ""
+
+            new_first  = title_name(current_first)
+            new_middle = title_name(current_middle)
+            new_last   = title_name(current_last)
+            new_suffix = title_name(current_suffix)
+            if new_first or new_last:
+                new_full = build_full_name(
+                    new_first, new_middle, new_last, new_suffix,
+                )
+            else:
+                # Fall back to title-casing whatever is in full_name when
+                # the per-part columns are blank (older legacy rows).
+                new_full = title_name(current_full)
+
+            updates: dict = {}
+            if new_first  != current_first:  updates["first_name"]  = new_first
+            if new_middle != current_middle: updates["middle_name"] = new_middle or None
+            if new_last   != current_last:   updates["last_name"]   = new_last
+            if new_suffix != current_suffix: updates["suffix"]      = new_suffix or None
+            if new_full   != current_full:   updates["full_name"]   = new_full
+
+            if updates:
+                sb.table("profiles").update(updates).eq("id", user.id).execute()
+                # Reflect the change in the in-memory record we hand to
+                # the session below.
+                prof.data["full_name"] = new_full
+        except Exception:
+            # Cosmetic only — don't block login if the rewrite fails.
             pass
 
         session.clear()
