@@ -14,7 +14,6 @@
 set -euo pipefail
 
 DOMAIN_PRIMARY="www.sk-bukal.online"
-DOMAIN_APEX="sk-bukal.online"
 LE_EMAIL="ceaneazucena@gmail.com"
 LIVE_DIR="/etc/letsencrypt/live/${DOMAIN_PRIMARY}"
 HTTPS_CONF="/etc/nginx/conf.d/https.conf"
@@ -36,11 +35,15 @@ fi
 
 # 2. Request the cert if we don't already have it.
 if [ ! -f "${LIVE_DIR}/fullchain.pem" ]; then
-    log "Requesting Let's Encrypt cert for ${DOMAIN_PRIMARY} / ${DOMAIN_APEX}"
+    log "Requesting Let's Encrypt cert for ${DOMAIN_PRIMARY}"
     # certbot --standalone needs port 80 free, so stop nginx briefly.
+    # We only request a cert for the www host because the apex
+    # (sk-bukal.online) is handled by the Spaceship URL Redirect — it
+    # sends visitors to https://www.sk-bukal.online before they ever
+    # hit our nginx, so we don't need to terminate TLS for it here.
     systemctl stop nginx || true
     "${CERTBOT_BIN}" certonly --standalone \
-        -d "${DOMAIN_PRIMARY}" -d "${DOMAIN_APEX}" \
+        -d "${DOMAIN_PRIMARY}" \
         --non-interactive --agree-tos --no-eff-email \
         --email "${LE_EMAIL}" \
         --keep-until-expiring
@@ -58,7 +61,7 @@ server {
     listen       443 ssl;
     listen       [::]:443 ssl;
     http2        on;
-    server_name  ${DOMAIN_PRIMARY} ${DOMAIN_APEX};
+    server_name  ${DOMAIN_PRIMARY};
 
     ssl_certificate     ${LIVE_DIR}/fullchain.pem;
     ssl_certificate_key ${LIVE_DIR}/privkey.pem;
@@ -91,7 +94,7 @@ server {
 server {
     listen       80;
     listen       [::]:80;
-    server_name  ${DOMAIN_PRIMARY} ${DOMAIN_APEX};
+    server_name  ${DOMAIN_PRIMARY};
 
     location /.well-known/acme-challenge/ {
         root /var/www/letsencrypt;
