@@ -475,22 +475,18 @@
             try {
                 const { ok, data } = await postJson(bulkBtn.dataset.url);
                 if (ok) {
-                    const skipped = (data && data.skipped) || [];
-                    const sent    = (data && data.sent) || 0;
-                    let summary = "Naipadala sa " + sent + " na scholar.";
-                    if (skipped.length) {
-                        summary += " " + skipped.length + " ang na-skip:\n" +
-                            skipped.map(function (s) {
-                                return "• " + s.student + " (" + s.reason + ")";
-                            }).join("\n");
-                    }
-                    window.alert(summary);
-                    // Mark every per-cert row as sent so the admin sees the result.
+                    const queued = (data && (data.queued ?? data.sent)) || 0;
+                    window.alert(
+                        "Naka-queue na ang " + queued + " certificate. " +
+                        "Ipapadala sa email ng bawat joiner sa loob ng " +
+                        "ilang minuto.");
+                    // Mark every per-cert row as queued so the admin sees
+                    // we accepted the batch.
                     document.querySelectorAll("[data-cert-row]").forEach(function (row) {
                         const s = row.querySelector("[data-cert-status]");
                         const b = row.querySelector("[data-cert-send]");
-                        setStatus(s, "Sent ✓", "ok");
-                        if (b) { b.disabled = true; b.textContent = "✓ Sent"; }
+                        setStatus(s, "Queued ✓", "ok");
+                        if (b) { b.disabled = true; b.textContent = "Queued"; }
                     });
                 } else {
                     window.alert((data && data.error) || "Hindi naipadala ang lahat.");

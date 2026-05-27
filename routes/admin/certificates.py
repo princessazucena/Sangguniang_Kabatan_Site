@@ -10,6 +10,7 @@ For each Pay-out and General Orientation announcement, the admin can:
 * Email each joiner an individual PDF copy of their certificate, either
   one at a time or for the whole event in one click.
 """
+import threading
 from datetime import datetime, timedelta, timezone
 
 from flask import (
@@ -327,7 +328,13 @@ def send_certificate_to_student(event_id: int, student_id: str):
 @admin_bp.route("/certificates/<int:event_id>/send-all", methods=["POST"])
 @admin_required
 def send_certificates_bulk(event_id: int):
-    """Email every joiner of an event their personal certificate PDF."""
+    """Email every joiner of an event their personal certificate PDF.
+
+    The actual fan-out runs in a daemon thread so the admin's HTTP
+    request returns in milliseconds even when there are dozens of
+    joiners. The browser shows an optimistic "queued" toast and the
+    emails land over the next few minutes.
+    """
     sb = get_supabase()
     event = _load_event_or_404(sb, event_id)
 
@@ -340,46 +347,40 @@ def send_certificates_bulk(event_id: int):
         .execute()
     ).data or []
 
-    sent: list[str] = []
-    skipped: list[dict] = []
+    app = current_app._get_current_object()
+    event_snapshot = dict(event)
+    students = [(j.get("student") or {}) for j in joins]
 
-    for j in joins:
-        student = j.get("student") or {}
-        sid     = student.get("id")
-        name    = student.get("full_name") or "Student"
-        if not sid:
-            skipped.append({"student": name, "reason": "missing id"})
-            continue
+    def _run():
+        with app.app_context():
+            sb_local = get_supabase()
+            for student in students:
+                sid  = student.get("id")
+                name = student.get("full_name") or "Student"
+                if not sid:
+                    continue
+                try:
+                    email = get_student_email(sb_local, sid)
+                    if not email:
+                        continue
+                    ctx = _build_ctx_for_student(event_snapshot, student)
+                    pdf_bytes = build_certificate_pdf(ctx)
+                    send_certificate_email(
+                        to_email     = email,
+                        student_name = name,
+                        event_title  = event_snapshot.get("title") or "",
+                        event_kind   = ctx.get("event_kind") or "",
+                        pdf_bytes    = pdf_bytes,
+                        filename     = _safe_filename(name),
+                    )
+                except Exception:
+                    app.logger.exception(
+                        "bulk certificate send failed for %s", sid)
 
-        email = get_student_email(sb, sid)
-        if not email:
-            skipped.append({"student": name, "reason": "no email"})
-            continue
-
-        try:
-            ctx = _build_ctx_for_student(event, student)
-            pdf_bytes = build_certificate_pdf(ctx)
-        except Exception:
-            current_app.logger.exception("certificate PDF render failed for %s", sid)
-            skipped.append({"student": name, "reason": "pdf error"})
-            continue
-
-        ok = send_certificate_email(
-            to_email     = email,
-            student_name = name,
-            event_title  = event.get("title") or "",
-            event_kind   = ctx.get("event_kind") or "",
-            pdf_bytes    = pdf_bytes,
-            filename     = _safe_filename(name),
-        )
-        if ok:
-            sent.append(name)
-        else:
-            skipped.append({"student": name, "reason": "send failed"})
+    threading.Thread(target=_run, daemon=True).start()
 
     return jsonify({
-        "ok":      True,
-        "sent":    len(sent),
-        "skipped": skipped,
-        "total":   len(joins),
+        "ok":     True,
+        "queued": len(students),
+        "total":  len(joins),
     })

@@ -55,6 +55,22 @@ def create_app() -> Flask:
     app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
     app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB upload cap
 
+    # Harden the session cookie for production. SameSite=Lax stops most
+    # cross-site request forgery; Secure makes the browser refuse to send
+    # the cookie over plain HTTP; HttpOnly keeps it out of JavaScript so
+    # an XSS bug can't steal it.
+    app.config.update(
+        SESSION_COOKIE_SECURE   = True,
+        SESSION_COOKIE_HTTPONLY = True,
+        SESSION_COOKIE_SAMESITE = "Lax",
+    )
+
+    # Trust the X-Forwarded-* headers from nginx so url_for() and
+    # request.is_secure return the right values when generating links
+    # (password-reset emails, redirects after login, etc.).
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
     # Make timezone-aware formatters available in templates.
     app.jinja_env.filters["ph"]      = _ph_filter
     app.jinja_env.filters["ph_date"] = _ph_date_filter

@@ -71,6 +71,15 @@ server {
     ssl_session_cache   shared:SSL:10m;
     ssl_session_timeout 1d;
 
+    # ---- Security headers ----
+    # Force browsers to keep using HTTPS for the next 6 months. Safe
+    # because we already 301-redirect HTTP to HTTPS below.
+    add_header Strict-Transport-Security "max-age=15552000; includeSubDomains" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
+
     client_max_body_size 25M;
 
     location /static/ {
