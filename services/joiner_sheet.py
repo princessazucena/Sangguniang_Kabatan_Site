@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Iterable
 
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, landscape
+from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader
@@ -24,7 +24,8 @@ from reportlab.platypus import (
 
 PH_TZ = timezone(timedelta(hours=8))
 
-PAGE_SIZE = landscape(letter)
+# Portrait letter — admin requested vertical (not landscape) attendance sheet.
+PAGE_SIZE = letter
 PAGE_W, PAGE_H = PAGE_SIZE
 LEFT_MARGIN  = 0.6 * inch
 RIGHT_MARGIN = 0.6 * inch
@@ -210,14 +211,16 @@ def build_joiner_sheet(
     join_list = list(joins)
 
     avail_w = PAGE_W - LEFT_MARGIN - RIGHT_MARGIN
+    # Portrait: ~7.3" of usable width. Trim the joined-at column and the
+    # name column slightly so the signature still has enough room.
     col_widths = [
-        0.5 * inch,                   # row number
-        2.6 * inch,                   # name
-        1.7 * inch,                   # joined_at
-        avail_w - (0.5 + 2.6 + 1.7) * inch,  # signature fills the rest
+        0.4 * inch,                   # row number
+        2.4 * inch,                   # name
+        1.4 * inch,                   # joined_at
+        avail_w - (0.4 + 2.4 + 1.4) * inch,  # signature fills the rest
     ]
     sig_max_w = col_widths[3] - 8
-    sig_max_h = 0.7 * inch
+    sig_max_h = 0.65 * inch
 
     for idx, j in enumerate(join_list, start=1):
         student = j.get("student") or {}

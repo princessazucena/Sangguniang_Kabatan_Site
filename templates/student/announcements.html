@@ -152,7 +152,7 @@
      role="dialog" aria-modal="true" aria-labelledby="signature-title">
     <div class="absolute inset-0 bg-slate-900/60" data-sign-close></div>
     <form method="post" id="signature-form"
-          class="relative bg-white rounded-xl shadow-xl w-full max-w-md flex flex-col overflow-hidden">
+          class="relative bg-white rounded-xl shadow-xl w-full max-w-2xl flex flex-col overflow-hidden max-h-[95vh]">
         <div class="flex items-start gap-3 px-5 py-4 border-b">
             <span class="w-10 h-10 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
                 <i class="fa-solid fa-pen-nib"></i>
@@ -174,8 +174,9 @@
             </p>
             <div class="rounded-lg border border-slate-200 bg-slate-50 overflow-hidden">
                 <canvas id="signature-pad"
-                        width="600" height="220"
-                        class="w-full block touch-none bg-white"></canvas>
+                        width="900" height="380"
+                        class="w-full block touch-none bg-white"
+                        style="height: clamp(280px, 45vh, 420px);"></canvas>
             </div>
             <div class="flex items-center justify-between">
                 <p id="signature-help" class="text-[11px] text-slate-500"></p>
