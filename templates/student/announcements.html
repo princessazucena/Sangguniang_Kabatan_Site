@@ -82,11 +82,30 @@
                             {% endif %}
                         </div>
                     {% elif a.category == 'payout' %}
+                        {% set orient_req = orientation_status.get(a.id, {}) %}
+                        {% set needs_orientation = orient_req and not orient_req.get('attended') %}
+                        
+                        {# Show warning if orientation is required but not attended #}
+                        {% if needs_orientation %}
+                        <div class="mt-2 bg-amber-50 border border-amber-200 rounded-md p-2">
+                            <p class="text-[11px] sm:text-xs text-amber-800">
+                                <i class="fa-solid fa-exclamation-triangle mr-1"></i>
+                                <span class="font-semibold">General Orientation required.</span>
+                                You must attend the required orientation event before joining this pay-out.
+                            </p>
+                        </div>
+                        {% endif %}
+                        
                         <div class="mt-2 sm:mt-3">
                             {% if a.id in joined_ids %}
                                 <button type="button" disabled
                                         class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-green-100 text-green-800 text-xs sm:text-sm font-medium cursor-not-allowed">
                                     <i class="fa-solid fa-circle-check"></i> Joined
+                                </button>
+                            {% elif needs_orientation %}
+                                <button type="button" disabled
+                                        class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-slate-300 text-slate-600 text-xs sm:text-sm font-medium cursor-not-allowed">
+                                    <i class="fa-solid fa-lock"></i> Attend orientation first
                                 </button>
                             {% elif a.status == 'open' %}
                                 <button type="button"

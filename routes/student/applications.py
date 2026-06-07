@@ -12,7 +12,7 @@ from flask import (
 )
 
 from supabase_client import get_supabase, get_bucket_name
-from services.announcements import current_open_registration
+from services.announcements import current_open_registration, student_joined_orientation
 
 from ._common import (
     student_bp, student_required,
@@ -47,6 +47,26 @@ def applications_list():
     if already_verified:
         open_registration = None
         open_app = None
+    
+    # Check if the open registration requires attendance at a specific orientation
+    orientation_required = None
+    orientation_attended = True
+    if open_registration:
+        required_orientation_id = open_registration.get("required_orientation_id")
+        if required_orientation_id:
+            orientation_attended = student_joined_orientation(sb, student_id, required_orientation_id)
+            if not orientation_attended:
+                # Fetch the orientation details to show to the student
+                try:
+                    orientation_required = (
+                        sb.table("announcements")
+                        .select("id, title")
+                        .eq("id", required_orientation_id)
+                        .single()
+                        .execute()
+                    ).data
+                except Exception:
+                    orientation_required = {"id": required_orientation_id, "title": "General Orientation"}
 
     # Decorate each application for display (level/year labels).
     for a in applications:
@@ -59,6 +79,8 @@ def applications_list():
         open_registration=open_registration,
         open_application=open_app,
         already_verified=already_verified,
+        orientation_required=orientation_required,
+        orientation_attended=orientation_attended,
     )
 
 
@@ -73,6 +95,13 @@ def apply():
     if not open_reg:
         flash("There is no open scholarship registration right now.", "error")
         return redirect(url_for("student.applications_list"))
+
+    # Check if orientation attendance is required
+    required_orientation_id = open_reg.get("required_orientation_id")
+    if required_orientation_id:
+        if not student_joined_orientation(sb, student_id, required_orientation_id):
+            flash("You must attend the required General Orientation event before applying for this scholarship.", "error")
+            return redirect(url_for("student.applications_list"))
 
     # Block applying if any earlier application is already verified.
     existing_apps = student_applications(sb, student_id)

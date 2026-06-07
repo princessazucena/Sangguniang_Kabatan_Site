@@ -12,6 +12,7 @@ from flask import render_template, request, redirect, url_for, flash, session
 from supabase_client import get_supabase
 from services.announcements import (
     annotate, schedule_status, JOINABLE_CATEGORIES, filter_visible,
+    student_joined_orientation,
 )
 
 from ._common import student_bp, student_required, student_applications, student_has_verified_application
@@ -66,12 +67,25 @@ def announcements():
     already_verified = student_has_verified_application(
         student_applications(sb, student_id)
     )
+    
+    # Build a map of event_id -> required_orientation attendance status
+    orientation_status = {}
+    for a in items:
+        required_orientation_id = a.get("required_orientation_id")
+        if required_orientation_id and a.get("category") == "payout":
+            # Check if student attended the required orientation
+            attended = student_joined_orientation(sb, student_id, required_orientation_id)
+            orientation_status[a["id"]] = {
+                "required_id": required_orientation_id,
+                "attended": attended,
+            }
 
     return render_template(
         "student/announcements.html",
         announcements=items,
         joined_ids=joined_ids,
         already_verified=already_verified,
+        orientation_status=orientation_status,
     )
 
 
@@ -89,13 +103,20 @@ def join_payout(anc_id: int):
     if schedule_status(anc) != "open":
         flash("The join window for this event is not open.", "error")
         return redirect(url_for("student.announcements"))
+    
+    # Check if orientation attendance is required for payout events
+    student_id = session["user_id"]
+    required_orientation_id = anc.get("required_orientation_id")
+    if required_orientation_id and anc.get("category") == "payout":
+        if not student_joined_orientation(sb, student_id, required_orientation_id):
+            flash("You must attend the required General Orientation event before joining this pay-out.", "error")
+            return redirect(url_for("student.announcements"))
 
     signature = (request.form.get("signature") or "").strip()
     if not _is_valid_signature(signature):
         flash("Pumirma muna sa signature pad bago mag-join.", "error")
         return redirect(url_for("student.announcements"))
 
-    student_id = session["user_id"]
     now_iso = datetime.now(timezone.utc).isoformat()
     try:
         sb.table("announcement_joins").insert({

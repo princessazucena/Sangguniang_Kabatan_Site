@@ -16,7 +16,7 @@ from supabase_client import get_supabase, get_bucket_name
 from services.announcements import (
     CATEGORIES, CATEGORY_LABELS, JOINABLE_CATEGORIES, SCHEDULED_CATEGORIES,
     EVENT_CATEGORIES,
-    annotate, schedule_status,
+    annotate, schedule_status, get_orientation_events,
 )
 from services.email import broadcast_announcement_email
 from services.joiner_sheet import build_joiner_sheet
@@ -55,6 +55,16 @@ def announcements():
         notify_landing = bool(request.form.get("notify_landing"))
         notify_inapp   = bool(request.form.get("notify_inapp"))
         notify_email   = bool(request.form.get("notify_email"))
+        
+        # Parse required_orientation_id for registration and payout events
+        required_orientation_id = None
+        if category in ("registration", "payout"):
+            raw_orientation_id = (request.form.get("required_orientation_id") or "").strip()
+            if raw_orientation_id:
+                try:
+                    required_orientation_id = int(raw_orientation_id)
+                except ValueError:
+                    pass
 
         if category not in EVENT_CATEGORIES:
             flash("Invalid category.", "error")
@@ -84,6 +94,7 @@ def announcements():
             "notify_inapp":   notify_inapp,
             "notify_email":   notify_email,
             "posted_by": session["user_id"],
+            "required_orientation_id": required_orientation_id,
         }).execute()
         new_id = (inserted.data or [{}])[0].get("id")
 
@@ -161,11 +172,15 @@ def announcements():
             counts[j["announcement_id"]] = counts.get(j["announcement_id"], 0) + 1
     for a in items:
         a["join_count"] = counts.get(a["id"], 0)
+    
+    # Fetch all orientation events for the dropdown in the form
+    orientation_events = get_orientation_events(sb)
 
     return render_template(
         "admin/announcements.html",
         announcements=items,
         category_labels=CATEGORY_LABELS,
+        orientation_events=orientation_events,
     )
 
 

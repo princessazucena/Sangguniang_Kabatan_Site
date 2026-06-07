@@ -117,3 +117,38 @@ def current_open_registration(sb) -> Optional[dict]:
         if schedule_status(r) == "open":
             return r
     return None
+
+
+def student_joined_orientation(sb, student_id: str, orientation_id: int) -> bool:
+    """
+    Check if a student has joined a specific General Orientation event.
+    Returns True if the student is in the announcement_joins table for
+    the given orientation_id.
+    """
+    try:
+        result = (
+            sb.table("announcement_joins")
+            .select("id")
+            .eq("student_id", student_id)
+            .eq("announcement_id", orientation_id)
+            .limit(1)
+            .execute()
+        )
+        return len(result.data or []) > 0
+    except Exception:
+        return False
+
+
+def get_orientation_events(sb) -> list[dict]:
+    """
+    Fetch all General Orientation events ordered by most recent first.
+    Used for the dropdown when creating Registration/Pay-Out events.
+    """
+    result = (
+        sb.table("announcements")
+        .select("id, title, start_at, end_at, created_at")
+        .eq("category", "general_orientation")
+        .order("created_at", desc=True)
+        .execute()
+    )
+    return result.data or []

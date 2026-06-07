@@ -185,6 +185,28 @@
                     <option value="general_orientation">General Orientation</option>
                 </select>
             </div>
+            
+            <div id="orientation-prerequisite-field" style="display:none;" class="bg-amber-50 border border-amber-200 rounded-md p-3">
+                <label class="block text-sm font-medium mb-1 text-amber-900">
+                    <i class="fa-solid fa-lock mr-1"></i>
+                    Required General Orientation (Optional)
+                </label>
+                <select name="required_orientation_id" id="orientation-select"
+                        class="w-full rounded-md border border-amber-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    <option value="">None — any student can join/apply</option>
+                    {% for orient in orientation_events %}
+                        <option value="{{ orient.id }}">
+                            {{ orient.title }}
+                            {% if orient.start_at %}
+                                ({{ orient.start_at | ph_date }})
+                            {% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+                <p class="text-xs text-amber-700 mt-1">
+                    Kung pipiliin mo ang orientation event, only students who attended that event can apply for the scholarship or join the pay-out.
+                </p>
+            </div>
             <div>
                 <label class="block text-sm font-medium mb-1">Title</label>
                 <input name="title" required
@@ -285,6 +307,8 @@
     // ----- show/hide schedule fields based on category -----
     const cat   = document.getElementById('cat-select');
     const sched = document.getElementById('schedule-fields');
+    const orientField = document.getElementById('orientation-prerequisite-field');
+    const orientSelect = document.getElementById('orientation-select');
     if (cat && sched) {
         const startInput = sched.querySelector('input[name="start_at"]');
         const endInput   = sched.querySelector('input[name="end_at"]');
@@ -292,6 +316,18 @@
         sched.style.display = '';
         startInput.required = true;
         endInput.required   = true;
+        
+        // Show/hide orientation prerequisite field for registration and payout
+        function updateOrientationField() {
+            if (cat.value === 'registration' || cat.value === 'payout') {
+                orientField.style.display = '';
+            } else {
+                orientField.style.display = 'none';
+                if (orientSelect) orientSelect.value = '';
+            }
+        }
+        cat.addEventListener('change', updateOrientationField);
+        updateOrientationField();
     }
 })();
 </script>
