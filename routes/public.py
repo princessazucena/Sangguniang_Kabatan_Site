@@ -14,9 +14,9 @@ Flow:
 import os
 import re
 import secrets
+import logging
 from datetime import datetime, timedelta, timezone
 
-import requests
 from flask import (
     Blueprint, render_template, request, redirect,
     url_for, flash, session,
@@ -25,6 +25,7 @@ from flask import (
 from supabase_client import get_supabase
 from services.announcements import annotate, filter_visible
 from services.names import title_name, build_full_name
+from services.email import send_email
 from services import psgc
 
 public_bp = Blueprint("public", __name__)
@@ -672,19 +673,13 @@ def logout():
 # -----------------------------------------------------------------
 # forgot password
 # -----------------------------------------------------------------
-def _send_reset_email(to_email: str, full_name: str, code: str) -> None:
-    """Send the password-reset OTP via the same Brevo HTTP API."""
-    api_key = os.environ.get("BREVO_API_KEY")
-    if not api_key:
-        raise RuntimeError("BREVO_API_KEY is not configured on the server.")
-
-    sender_email = os.environ.get("BREVO_SENDER_EMAIL")
-    sender_name  = os.environ.get(
-        "BREVO_SENDER_NAME", "Sangguniang Kabataan ng Bukal",
-    )
-    if not sender_email:
-        raise RuntimeError("BREVO_SENDER_EMAIL is not configured on the server.")
-
+def _send_reset_email(to_email: str, full_name: str, code: str) -> bool:
+    """Send the password-reset OTP using the centralized email service.
+    
+    Returns True if sent successfully, False otherwise.
+    Errors are logged but not raised — this allows the password reset
+    flow to continue even if email temporarily fails.
+    """
     html_body = f"""
     <div style="font-family: Arial, sans-serif; max-width: 480px;">
         <h2 style="color:#476a40;">Reset your password</h2>
@@ -702,25 +697,19 @@ def _send_reset_email(to_email: str, full_name: str, code: str) -> None:
     </div>
     """
 
-    resp = requests.post(
-        "https://api.brevo.com/v3/smtp/email",
-        headers={
-            "api-key":      api_key,
-            "Content-Type": "application/json",
-            "Accept":       "application/json",
-        },
-        json={
-            "sender":      {"name": sender_name, "email": sender_email},
-            "to":          [{"email": to_email, "name": full_name or to_email}],
-            "subject":     "Your Scholarship Portal password reset code",
-            "htmlContent": html_body,
-        },
-        timeout=15,
+    success = send_email(
+        to_email=to_email,
+        to_name=full_name or to_email,
+        subject="Your Scholarship Portal password reset code",
+        html_content=html_body,
     )
-    if resp.status_code >= 300:
-        raise RuntimeError(
-            f"Email provider returned {resp.status_code}: {resp.text}"
-        )
+    
+    if not success:
+        import logging
+        log = logging.getLogger(__name__)
+        log.error(f"Failed to send password reset email to {to_email}")
+    
+    return success
 
 
 def _store_reset_code(sb, profile_id: str) -> str:
@@ -769,11 +758,16 @@ def forgot_password():
                     .execute()
                 ).data or {}
                 code = _store_reset_code(sb, user.id)
-                _send_reset_email(email, prof.get("full_name") or "", code)
+                success = _send_reset_email(email, prof.get("full_name") or "", code)
+                if not success:
+                    # Email service logged the failure; log it to user but don't block
+                    flash("Email sending encountered an issue, but your reset code is ready. Check spam folder.", "warning")
             except Exception as exc:
-                # Log it server-side via the flash, but still redirect to
-                # the verify step so the form is consistent.
-                flash(f"Could not send reset email: {exc}", "error")
+                # Log it server-side, but still redirect to the verify step
+                import logging
+                log = logging.getLogger(__name__)
+                log.error(f"Error in forgot_password: {exc}", exc_info=True)
+                flash("There was an issue sending your reset code. Please try again in a moment.", "error")
                 return render_template("public/forgot_password.html", email=email)
 
         flash("If that email is registered, we sent a reset code. Check your inbox.", "success")
@@ -872,10 +866,16 @@ def resend_reset_code():
                 .execute()
             ).data or {}
             code = _store_reset_code(sb, user.id)
-            _send_reset_email(email, prof.get("full_name") or "", code)
-            flash("New code sent. Check your email.", "success")
+            success = _send_reset_email(email, prof.get("full_name") or "", code)
+            if success:
+                flash("New code sent. Check your email.", "success")
+            else:
+                flash("Code generated but email sending failed. Check spam folder.", "warning")
         except Exception as exc:
-            flash(f"Could not resend code: {exc}", "error")
+            import logging
+            log = logging.getLogger(__name__)
+            log.error(f"Error in resend_reset_code: {exc}", exc_info=True)
+            flash("Could not resend code. Please try again.", "error")
     else:
         flash("If that email is registered, we sent a new code.", "success")
 
