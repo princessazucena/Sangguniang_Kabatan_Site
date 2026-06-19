@@ -734,26 +734,31 @@ def _store_reset_code(sb, profile_id: str) -> str:
 def _find_user_by_email(sb, email: str):
     """Look up an auth user by lowercased email. Returns the user or None."""
     import logging
-    import sys
     log = logging.getLogger(__name__)
     
+    log.info(f"[FIND USER] START: Searching for email: {email}")
     try:
-        print(f"[FIND USER] Searching for email: {email}", file=sys.stderr, flush=True)
-        users = sb.auth.admin.list_users()
-        user_list = getattr(users, "users", None) or users
-        print(f"[FIND USER] Retrieved {len(user_list) if user_list else 0} users total", file=sys.stderr, flush=True)
+        users_response = sb.auth.admin.list_users()
+        log.info(f"[FIND USER] Got response: {type(users_response)}")
+        
+        user_list = getattr(users_response, "users", None) or users_response
+        log.info(f"[FIND USER] user_list type: {type(user_list)}, length: {len(user_list) if user_list else 0}")
+        
+        if not user_list:
+            log.warning(f"[FIND USER] Empty user list returned")
+            return None
         
         for u in user_list:
-            user_email = (u.email or "").lower()
+            user_email = (getattr(u, "email", None) or "").lower()
+            log.debug(f"[FIND USER] Comparing: {user_email} == {email}")
             if user_email == email:
-                print(f"[FIND USER] FOUND user: {u.id} with email: {user_email}", file=sys.stderr, flush=True)
+                log.info(f"[FIND USER] FOUND user: {getattr(u, 'id', '?')} with email: {user_email}")
                 return u
         
-        print(f"[FIND USER] User NOT FOUND for email: {email}", file=sys.stderr, flush=True)
+        log.info(f"[FIND USER] User NOT FOUND for email: {email}")
         return None
     except Exception as e:
-        print(f"[FIND USER] ERROR: {str(e)}", file=sys.stderr, flush=True)
-        log.error(f"Error in _find_user_by_email: {e}", exc_info=True)
+        log.error(f"[FIND USER] ERROR: {type(e).__name__}: {str(e)}", exc_info=True)
         return None
 
 
@@ -802,13 +807,11 @@ def forgot_password():
                 log.info(f"[FORGOT PASSWORD] Email send result: {success}")
                 
                 if not success:
-                    # Email service logged the failure; log it to user but don't block
                     log.warning(f"[FORGOT PASSWORD] Email sending failed for: {email}")
                     flash("Email sending encountered an issue, but your reset code is ready. Check spam folder.", "warning")
                 else:
                     log.info(f"[FORGOT PASSWORD] Email sent successfully to: {email}")
             except Exception as exc:
-                # Log it server-side, but still redirect to the verify step
                 log.error(f"[FORGOT PASSWORD] Exception occurred for {email}: {exc}", exc_info=True)
                 flash("There was an issue sending your reset code. Please try again in a moment.", "error")
                 return render_template("public/forgot_password.html", email=email)
@@ -895,25 +898,20 @@ def reset_password():
 def resend_reset_code():
     """Re-send a reset OTP from the reset page."""
     import logging
-    import sys
     log = logging.getLogger(__name__)
     
     email = (request.form.get("email") or "").strip().lower()
-    print(f"[RESEND CODE] Request received for email: {email}", file=sys.stderr, flush=True)
     log.info(f"[RESEND CODE] Request received for email: {email}")
     
     if not email:
-        print(f"[RESEND CODE] No email provided", file=sys.stderr, flush=True)
         log.warning(f"[RESEND CODE] No email provided, redirecting to forgot page")
         return redirect(url_for("public.forgot_password"))
 
     sb = get_supabase()
-    print(f"[RESEND CODE] Looking up user for email: {email}", file=sys.stderr, flush=True)
     log.info(f"[RESEND CODE] Looking up user for email: {email}")
     user = _find_user_by_email(sb, email)
     
     if user:
-        print(f"[RESEND CODE] User found: {user.id}", file=sys.stderr, flush=True)
         log.info(f"[RESEND CODE] User found: {user.id}")
         try:
             prof = (
@@ -923,28 +921,23 @@ def resend_reset_code():
                 .single()
                 .execute()
             ).data or {}
-            print(f"[RESEND CODE] Profile fetched: {prof.get('full_name')}", file=sys.stderr, flush=True)
             log.info(f"[RESEND CODE] Profile fetched: {prof.get('full_name')}")
             
             code = _store_reset_code(sb, user.id)
-            print(f"[RESEND CODE] Reset code stored: {code}", file=sys.stderr, flush=True)
             log.info(f"[RESEND CODE] Reset code stored: {code}")
             
-            print(f"[RESEND CODE] Sending reset email to: {email}", file=sys.stderr, flush=True)
             log.info(f"[RESEND CODE] Sending reset email to: {email}")
             success = _send_reset_email(email, prof.get("full_name") or "", code)
-            print(f"[RESEND CODE] Email send result: {success}", file=sys.stderr, flush=True)
             log.info(f"[RESEND CODE] Email send result: {success}")
             if success:
                 flash("New code sent. Check your email.", "success")
             else:
                 flash("Code generated but email sending failed. Check spam folder.", "warning")
         except Exception as exc:
-            import logging
-            log = logging.getLogger(__name__)
-            log.error(f"Error in resend_reset_code: {exc}", exc_info=True)
+            log.error(f"[RESEND CODE] Error: {exc}", exc_info=True)
             flash("Could not resend code. Please try again.", "error")
     else:
+        log.warning(f"[RESEND CODE] User not found for email: {email}")
         flash("If that email is registered, we sent a new code.", "success")
 
     return redirect(url_for("public.reset_password", email=email))
