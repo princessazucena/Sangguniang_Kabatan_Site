@@ -680,6 +680,11 @@ def _send_reset_email(to_email: str, full_name: str, code: str) -> bool:
     Errors are logged but not raised — this allows the password reset
     flow to continue even if email temporarily fails.
     """
+    import logging
+    log = logging.getLogger(__name__)
+    
+    log.info(f"Preparing to send password reset email to: {to_email} (name: {full_name})")
+    
     html_body = f"""
     <div style="font-family: Arial, sans-serif; max-width: 480px;">
         <h2 style="color:#476a40;">Reset your password</h2>
@@ -694,6 +699,9 @@ def _send_reset_email(to_email: str, full_name: str, code: str) -> bool:
             This code expires in {CODE_TTL_MINUTES} minutes. If you didn't
             request a reset, you can safely ignore this email.
         </p>
+        <p style="color:#94a3b8; font-size:11px; margin-top:16px;">
+            (This email should be received by {to_email})
+        </p>
     </div>
     """
 
@@ -704,9 +712,9 @@ def _send_reset_email(to_email: str, full_name: str, code: str) -> bool:
         html_content=html_body,
     )
     
-    if not success:
-        import logging
-        log = logging.getLogger(__name__)
+    if success:
+        log.info(f"Successfully sent password reset email to {to_email}")
+    else:
         log.error(f"Failed to send password reset email to {to_email}")
     
     return success

@@ -45,6 +45,8 @@ def send_email(
         log.warning("send_email skipped — missing Brevo config or recipient")
         return False
 
+    log.info(f"Sending email: FROM '{sender_name} <{sender_email}>' TO '{to_name} <{to_email}>' SUBJECT '{subject}'")
+
     payload = {
         "sender":      {"email": sender_email, "name": sender_name},
         "to":          [{"email": to_email, "name": to_name or to_email}],
@@ -78,6 +80,9 @@ def send_email(
         r = requests.post(BREVO_ENDPOINT, json=payload,
                           headers=headers, timeout=10)
         if r.status_code in (200, 201, 202):
+            response_data = r.json()
+            message_id = response_data.get("messageId", "unknown")
+            log.info(f"Email sent successfully to {to_email} (Message ID: {message_id})")
             return True
         log.warning("Brevo send failed (%s): %s", r.status_code, r.text[:300])
     except Exception as exc:
