@@ -882,20 +882,25 @@ def reset_password():
 def resend_reset_code():
     """Re-send a reset OTP from the reset page."""
     import logging
+    import sys
     log = logging.getLogger(__name__)
     
     email = (request.form.get("email") or "").strip().lower()
+    print(f"[RESEND CODE] Request received for email: {email}", file=sys.stderr, flush=True)
     log.info(f"[RESEND CODE] Request received for email: {email}")
     
     if not email:
+        print(f"[RESEND CODE] No email provided", file=sys.stderr, flush=True)
         log.warning(f"[RESEND CODE] No email provided, redirecting to forgot page")
         return redirect(url_for("public.forgot_password"))
 
     sb = get_supabase()
+    print(f"[RESEND CODE] Looking up user for email: {email}", file=sys.stderr, flush=True)
     log.info(f"[RESEND CODE] Looking up user for email: {email}")
     user = _find_user_by_email(sb, email)
     
     if user:
+        print(f"[RESEND CODE] User found: {user.id}", file=sys.stderr, flush=True)
         log.info(f"[RESEND CODE] User found: {user.id}")
         try:
             prof = (
@@ -905,13 +910,17 @@ def resend_reset_code():
                 .single()
                 .execute()
             ).data or {}
+            print(f"[RESEND CODE] Profile fetched: {prof.get('full_name')}", file=sys.stderr, flush=True)
             log.info(f"[RESEND CODE] Profile fetched: {prof.get('full_name')}")
             
             code = _store_reset_code(sb, user.id)
+            print(f"[RESEND CODE] Reset code stored: {code}", file=sys.stderr, flush=True)
             log.info(f"[RESEND CODE] Reset code stored: {code}")
             
+            print(f"[RESEND CODE] Sending reset email to: {email}", file=sys.stderr, flush=True)
             log.info(f"[RESEND CODE] Sending reset email to: {email}")
             success = _send_reset_email(email, prof.get("full_name") or "", code)
+            print(f"[RESEND CODE] Email send result: {success}", file=sys.stderr, flush=True)
             log.info(f"[RESEND CODE] Email send result: {success}")
             if success:
                 flash("New code sent. Check your email.", "success")
