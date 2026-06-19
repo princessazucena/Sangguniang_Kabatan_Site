@@ -881,13 +881,22 @@ def reset_password():
 @public_bp.route("/forgot/resend", methods=["POST"])
 def resend_reset_code():
     """Re-send a reset OTP from the reset page."""
+    import logging
+    log = logging.getLogger(__name__)
+    
     email = (request.form.get("email") or "").strip().lower()
+    log.info(f"[RESEND CODE] Request received for email: {email}")
+    
     if not email:
+        log.warning(f"[RESEND CODE] No email provided, redirecting to forgot page")
         return redirect(url_for("public.forgot_password"))
 
     sb = get_supabase()
+    log.info(f"[RESEND CODE] Looking up user for email: {email}")
     user = _find_user_by_email(sb, email)
+    
     if user:
+        log.info(f"[RESEND CODE] User found: {user.id}")
         try:
             prof = (
                 sb.table("profiles")
@@ -896,8 +905,14 @@ def resend_reset_code():
                 .single()
                 .execute()
             ).data or {}
+            log.info(f"[RESEND CODE] Profile fetched: {prof.get('full_name')}")
+            
             code = _store_reset_code(sb, user.id)
+            log.info(f"[RESEND CODE] Reset code stored: {code}")
+            
+            log.info(f"[RESEND CODE] Sending reset email to: {email}")
             success = _send_reset_email(email, prof.get("full_name") or "", code)
+            log.info(f"[RESEND CODE] Email send result: {success}")
             if success:
                 flash("New code sent. Check your email.", "success")
             else:
