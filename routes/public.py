@@ -733,15 +733,28 @@ def _store_reset_code(sb, profile_id: str) -> str:
 
 def _find_user_by_email(sb, email: str):
     """Look up an auth user by lowercased email. Returns the user or None."""
+    import logging
+    import sys
+    log = logging.getLogger(__name__)
+    
     try:
+        print(f"[FIND USER] Searching for email: {email}", file=sys.stderr, flush=True)
         users = sb.auth.admin.list_users()
         user_list = getattr(users, "users", None) or users
+        print(f"[FIND USER] Retrieved {len(user_list) if user_list else 0} users total", file=sys.stderr, flush=True)
+        
         for u in user_list:
-            if (u.email or "").lower() == email:
+            user_email = (u.email or "").lower()
+            if user_email == email:
+                print(f"[FIND USER] FOUND user: {u.id} with email: {user_email}", file=sys.stderr, flush=True)
                 return u
-    except Exception:
+        
+        print(f"[FIND USER] User NOT FOUND for email: {email}", file=sys.stderr, flush=True)
         return None
-    return None
+    except Exception as e:
+        print(f"[FIND USER] ERROR: {str(e)}", file=sys.stderr, flush=True)
+        log.error(f"Error in _find_user_by_email: {e}", exc_info=True)
+        return None
 
 
 @public_bp.route("/forgot", methods=["GET", "POST"])
