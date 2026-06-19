@@ -747,17 +747,30 @@ def _find_user_by_email(sb, email: str):
 @public_bp.route("/forgot", methods=["GET", "POST"])
 def forgot_password():
     """Step 1 — student enters email, we send a reset code."""
+    import logging
+    log = logging.getLogger(__name__)
+    
     if request.method == "POST":
         email = (request.form.get("email") or "").strip().lower()
+        log.info(f"[FORGOT PASSWORD] Request received for email: {email}")
+        
         if not email:
             flash("Please enter your email.", "error")
             return render_template("public/forgot_password.html", email="")
 
         sb = get_supabase()
+        log.info(f"[FORGOT PASSWORD] Looking up user for email: {email}")
         user = _find_user_by_email(sb, email)
+        
+        if user:
+            log.info(f"[FORGOT PASSWORD] User found: {user.id}")
+        else:
+            log.info(f"[FORGOT PASSWORD] User not found for email: {email}")
+        
         # Don't leak whether the email exists — always pretend we sent it.
         if user:
             try:
+                log.info(f"[FORGOT PASSWORD] Fetching profile for user: {user.id}")
                 prof = (
                     sb.table("profiles")
                     .select("full_name, email_verified")
@@ -765,19 +778,29 @@ def forgot_password():
                     .single()
                     .execute()
                 ).data or {}
+                log.info(f"[FORGOT PASSWORD] Profile fetched: {prof.get('full_name')}")
+                
+                log.info(f"[FORGOT PASSWORD] Storing reset code for user: {user.id}")
                 code = _store_reset_code(sb, user.id)
+                log.info(f"[FORGOT PASSWORD] Reset code stored: {code}")
+                
+                log.info(f"[FORGOT PASSWORD] Sending reset email to: {email}")
                 success = _send_reset_email(email, prof.get("full_name") or "", code)
+                log.info(f"[FORGOT PASSWORD] Email send result: {success}")
+                
                 if not success:
                     # Email service logged the failure; log it to user but don't block
+                    log.warning(f"[FORGOT PASSWORD] Email sending failed for: {email}")
                     flash("Email sending encountered an issue, but your reset code is ready. Check spam folder.", "warning")
+                else:
+                    log.info(f"[FORGOT PASSWORD] Email sent successfully to: {email}")
             except Exception as exc:
                 # Log it server-side, but still redirect to the verify step
-                import logging
-                log = logging.getLogger(__name__)
-                log.error(f"Error in forgot_password: {exc}", exc_info=True)
+                log.error(f"[FORGOT PASSWORD] Exception occurred for {email}: {exc}", exc_info=True)
                 flash("There was an issue sending your reset code. Please try again in a moment.", "error")
                 return render_template("public/forgot_password.html", email=email)
 
+        log.info(f"[FORGOT PASSWORD] Redirecting to reset page for email: {email}")
         flash("If that email is registered, we sent a reset code. Check your inbox.", "success")
         return redirect(url_for("public.reset_password", email=email))
 
