@@ -732,30 +732,47 @@ def _store_reset_code(sb, profile_id: str) -> str:
 
 
 def _find_user_by_email(sb, email: str):
-    """Look up an auth user by lowercased email. Returns the user or None."""
+    """Look up an auth user by lowercased email. Returns the user or None.
+    
+    Uses pagination to fetch all users since list_users() defaults to 50 per page.
+    """
     import logging
     log = logging.getLogger(__name__)
     
     log.info(f"[FIND USER] START: Searching for email: {email}")
     try:
-        users_response = sb.auth.admin.list_users()
-        log.info(f"[FIND USER] Got response: {type(users_response)}")
+        page = 1
+        found_users = 0
+        while True:
+            log.info(f"[FIND USER] Fetching page {page}...")
+            try:
+                users_response = sb.auth.admin.list_users(page=page, per_page=100)
+            except TypeError:
+                # Older client signature: returns everything in one call
+                log.info(f"[FIND USER] Using non-paginated API")
+                users_response = sb.auth.admin.list_users()
+            
+            user_list = getattr(users_response, "users", None) or users_response
+            
+            if not user_list:
+                log.info(f"[FIND USER] Page {page} is empty, stopping pagination")
+                break
+            
+            found_users += len(user_list) if user_list else 0
+            log.info(f"[FIND USER] Got {len(user_list) if user_list else 0} users on page {page}")
+            
+            for u in user_list:
+                user_email = (getattr(u, "email", None) or "").lower().strip()
+                if user_email == email:
+                    log.info(f"[FIND USER] FOUND user after checking {found_users} total users: {getattr(u, 'id', '?')} with email: {user_email}")
+                    return u
+            
+            # If we got fewer than 100, this was the last page
+            if len(user_list) < 100:
+                break
+            page += 1
         
-        user_list = getattr(users_response, "users", None) or users_response
-        log.info(f"[FIND USER] user_list type: {type(user_list)}, length: {len(user_list) if user_list else 0}")
-        
-        if not user_list:
-            log.warning(f"[FIND USER] Empty user list returned")
-            return None
-        
-        for u in user_list:
-            user_email = (getattr(u, "email", None) or "").lower()
-            log.debug(f"[FIND USER] Comparing: {user_email} == {email}")
-            if user_email == email:
-                log.info(f"[FIND USER] FOUND user: {getattr(u, 'id', '?')} with email: {user_email}")
-                return u
-        
-        log.info(f"[FIND USER] User NOT FOUND for email: {email}")
+        log.info(f"[FIND USER] User NOT FOUND after checking {found_users} total users for email: {email}")
         return None
     except Exception as e:
         log.error(f"[FIND USER] ERROR: {type(e).__name__}: {str(e)}", exc_info=True)
