@@ -17,7 +17,7 @@
 </div>
 
 {% set is_verified = application.status == 'verified' %}
-{% set locked = is_verified or not window_open %}
+{% set locked = is_verified or (not window_open and application.status not in ('pending', 'rejected')) %}
 
 {% if is_verified %}
     <div class="mb-3 p-3 sm:p-4 rounded-xl border border-green-200 bg-green-50 text-green-800 text-xs sm:text-sm flex items-start gap-2 sm:gap-3">
@@ -30,7 +30,7 @@
             </p>
         </div>
     </div>
-{% elif not window_open %}
+{% elif not window_open and application.status not in ('pending', 'rejected') %}
     <div class="mb-3 p-3 sm:p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs sm:text-sm flex items-start gap-2 sm:gap-3">
         <i class="fa-solid fa-lock mt-0.5"></i>
         <div>
@@ -42,6 +42,14 @@
                     to apply again.
                 {% endif %}
             </p>
+        </div>
+    </div>
+{% elif not window_open and application.status in ('pending', 'rejected') %}
+    <div class="mb-3 p-3 sm:p-4 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 text-xs sm:text-sm flex items-start gap-2 sm:gap-3">
+        <i class="fa-solid fa-info-circle mt-0.5"></i>
+        <div>
+            <p class="font-semibold">The original registration window is closed, but you can still update your application.</p>
+            <p>You can upload or replace documents for your pending application. The admin will review any changes.</p>
         </div>
     </div>
 {% endif %}
@@ -236,7 +244,7 @@
     </div>
 </form>
 
-{% if window_open and not is_verified %}
+{% if (window_open or application.status in ('pending', 'rejected')) and not is_verified %}
 <script>
 (function () {
     const form = document.querySelector('form[data-require-complete]');

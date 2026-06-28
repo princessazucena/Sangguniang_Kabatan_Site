@@ -408,14 +408,21 @@ def submit_requirements(app_id: int):
     if not app_row:
         abort(404)
 
-    if not registration_window_active(app_row):
-        flash("The scholarship registration window is not open. "
-              "You cannot submit requirements right now.", "error")
-        return redirect(url_for("student.application", app_id=app_id))
-
-    if app_row.get("status") == "verified":
+    # Allow uploads for pending/rejected applications even if their original
+    # registration window is closed. Students should be able to re-upload
+    # after rejection or continue incomplete applications.
+    status = app_row.get("status", "")
+    if status == "verified":
         flash("Verified na ang application mo, hindi na pwedeng baguhin.", "error")
         return redirect(url_for("student.application", app_id=app_id))
+    
+    # For pending/rejected apps, allow uploads anytime (no window check needed)
+    # For other statuses, check if window is active
+    if status not in ("pending", "rejected"):
+        if not registration_window_active(app_row):
+            flash("The scholarship registration window is not open. "
+                  "You cannot submit requirements right now.", "error")
+            return redirect(url_for("student.application", app_id=app_id))
 
     level = app_row.get("education_level")
     if not level:
