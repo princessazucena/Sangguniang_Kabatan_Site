@@ -5,6 +5,7 @@ The public area handles sign-up / log-in and shows announcements.
 Students upload their documents; admins review and verify them.
 """
 import os
+import bcrypt
 from datetime import datetime, timezone, timedelta
 
 from flask import Flask, redirect, url_for, session
