@@ -45,8 +45,13 @@ Check these URLs:
 
 Make sure Render is using:
 - **Build Command**: `pip install -r requirements.txt`
-- **Start Command**: `gunicorn --bind 0.0.0.0:$PORT --workers 4 --threads 2 --timeout 60 application:application`
+- **Start Command**: Auto-detected from Procfile, or manually set to:
+  ```
+  gunicorn --bind 0.0.0.0:$PORT --workers 4 --threads 2 --timeout 60 application:application
+  ```
 - **Python Version**: 3.12.5 (from runtime.txt)
+
+**IMPORTANT**: Render automatically reads the Procfile. The latest push fixed the PORT issue.
 
 ## Troubleshooting
 
