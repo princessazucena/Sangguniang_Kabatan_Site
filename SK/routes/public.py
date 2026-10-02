@@ -13,15 +13,19 @@ public_bp = Blueprint("public", __name__)
 
 @public_bp.route("/home")
 def home():
-    sb = get_supabase()
-    res = (
-        sb.table("announcements")
-        .select("*")
-        .order("created_at", desc=True)
-        .limit(20)
-        .execute()
-    )
-    return render_template("public/home.html", announcements=res.data or [])
+    try:
+        sb = get_supabase()
+        res = (
+            sb.table("announcements")
+            .select("*")
+            .order("created_at", desc=True)
+            .limit(20)
+            .execute()
+        )
+        announcements = res.data or []
+    except Exception:
+        announcements = []
+    return render_template("public/home.html", announcements=announcements)
 
 
 @public_bp.route("/signup", methods=["GET", "POST"])

@@ -166,16 +166,22 @@ def home():
     if role == "admin":
         return redirect(url_for("admin.dashboard"))
 
-    sb = get_supabase()
-    res = (
-        sb.table("announcements")
-        .select("*")
-        .eq("notify_landing", True)
-        .order("created_at", desc=True)
-        .limit(20)
-        .execute()
-    )
-    return render_template("public/home.html", announcements=annotate(filter_visible(res.data or [])))
+    try:
+        sb = get_supabase()
+        res = (
+            sb.table("announcements")
+            .select("*")
+            .eq("notify_landing", True)
+            .order("created_at", desc=True)
+            .limit(20)
+            .execute()
+        )
+        announcements = annotate(filter_visible(res.data or []))
+    except Exception as e:
+        logging.exception("Failed to load announcements for landing page: %s", e)
+        announcements = []
+
+    return render_template("public/home.html", announcements=announcements)
 
 
 # -----------------------------------------------------------------
