@@ -60,17 +60,41 @@ app = Flask(
     static_folder=os.path.join(BASE_DIR, "static"),
 )
 
-template_search_paths = [
-    os.path.join(BASE_DIR, "templates"),
-    os.path.join(os.getcwd(), "templates"),
-    os.path.join(BASE_DIR, "SK", "templates"),
-    os.path.join(os.getcwd(), "SK", "templates"),
-    os.path.abspath("templates"),
-    "templates",
-]
+def get_template_search_paths():
+    paths = []
+    for candidate_root in [
+        BASE_DIR,
+        os.getcwd(),
+        "/var/task",
+        "/var/task/app",
+        "/var/task/services/app",
+    ]:
+        if os.path.isdir(candidate_root):
+            for root, dirs, files in os.walk(candidate_root):
+                if any(x in root for x in [".venv", "__pycache__", "site-packages", ".git"]):
+                    continue
+                if "home.html" in files or "base.html" in files:
+                    if root not in paths:
+                        paths.append(root)
+                    parent = os.path.dirname(root)
+                    if parent not in paths:
+                        paths.append(parent)
+                if "templates" in dirs:
+                    t_path = os.path.join(root, "templates")
+                    if t_path not in paths:
+                        paths.append(t_path)
+    fallback = [
+        os.path.join(BASE_DIR, "templates"),
+        os.path.join(os.getcwd(), "templates"),
+        "templates",
+    ]
+    for f in fallback:
+        if f not in paths:
+            paths.append(f)
+    return paths
 
 from jinja2 import FileSystemLoader
-app.jinja_env.loader = FileSystemLoader(template_search_paths)
+app.jinja_env.loader = FileSystemLoader(get_template_search_paths())
 
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB upload cap

@@ -7,6 +7,12 @@
       "functions": {
         "app.py": {
           "includeFiles": "templates/**,static/**"
+        },
+        "**/*.py": {
+          "includeFiles": "templates/**,static/**"
+        },
+        "**": {
+          "includeFiles": "templates/**,static/**"
         }
       }
     },
@@ -15,6 +21,12 @@
       "framework": "flask",
       "functions": {
         "app.py": {
+          "includeFiles": "templates/**,static/**"
+        },
+        "**/*.py": {
+          "includeFiles": "templates/**,static/**"
+        },
+        "**": {
           "includeFiles": "templates/**,static/**"
         }
       }
