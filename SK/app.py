@@ -57,8 +57,16 @@ def get_template_search_paths():
             paths.append(f)
     return paths
 
-from jinja2 import FileSystemLoader
-app.jinja_env.loader = FileSystemLoader(get_template_search_paths())
+from jinja2 import FileSystemLoader, ChoiceLoader, DictLoader
+try:
+    from embedded_templates import EMBEDDED_TEMPLATES
+except ImportError:
+    EMBEDDED_TEMPLATES = {}
+
+app.jinja_env.loader = ChoiceLoader([
+    FileSystemLoader(get_template_search_paths()),
+    DictLoader(EMBEDDED_TEMPLATES),
+])
 
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB upload cap
