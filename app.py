@@ -8,8 +8,9 @@ import os
 import bcrypt
 from datetime import datetime, timezone, timedelta
 
-from flask import Flask, redirect, url_for, session
+from flask import Flask, redirect, url_for, session, request
 from dotenv import load_dotenv
+import logging
 
 from routes.public import public_bp
 from routes.student import student_bp
@@ -51,7 +52,13 @@ def _ph_date_filter(value, fmt="%Y-%m-%d"):
 
 load_dotenv()
 
-app = Flask(__name__, template_folder="templates", static_folder="static")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, "templates"),
+    static_folder=os.path.join(BASE_DIR, "static"),
+)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB upload cap
 
@@ -78,6 +85,14 @@ app.jinja_env.filters["ph_date"] = _ph_date_filter
 app.register_blueprint(public_bp)
 app.register_blueprint(student_bp, url_prefix="/student")
 app.register_blueprint(admin_bp, url_prefix="/admin")
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    from werkzeug.exceptions import HTTPException
+    if isinstance(e, HTTPException):
+        return e
+    logging.exception("Unhandled error on %s: %s", getattr(request, "path", "/"), e)
+    return f"Internal Server Error: {e}", 500
 
 @app.context_processor
 def inject_notifications():
