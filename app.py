@@ -60,12 +60,17 @@ app = Flask(
     static_folder=os.path.join(BASE_DIR, "static"),
 )
 
-from jinja2 import FileSystemLoader, ChoiceLoader
-app.jinja_loader = ChoiceLoader([
-    FileSystemLoader(os.path.join(BASE_DIR, "templates")),
-    FileSystemLoader(os.path.join(os.getcwd(), "templates")),
-    FileSystemLoader("templates"),
-])
+template_search_paths = [
+    os.path.join(BASE_DIR, "templates"),
+    os.path.join(os.getcwd(), "templates"),
+    os.path.join(BASE_DIR, "SK", "templates"),
+    os.path.join(os.getcwd(), "SK", "templates"),
+    os.path.abspath("templates"),
+    "templates",
+]
+
+from jinja2 import FileSystemLoader
+app.jinja_env.loader = FileSystemLoader(template_search_paths)
 
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB upload cap
