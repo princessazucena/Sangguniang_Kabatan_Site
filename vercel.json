@@ -3,11 +3,21 @@
   "services": {
     "app": {
       "root": ".",
-      "framework": "flask"
+      "framework": "flask",
+      "functions": {
+        "app.py": {
+          "includeFiles": "templates/**,static/**"
+        }
+      }
     },
     "sk": {
       "root": "SK",
-      "framework": "flask"
+      "framework": "flask",
+      "functions": {
+        "app.py": {
+          "includeFiles": "templates/**,static/**"
+        }
+      }
     }
   },
   "rewrites": [
